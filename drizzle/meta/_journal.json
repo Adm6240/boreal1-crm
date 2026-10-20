@@ -162,6 +162,48 @@
       "when": 1792166299625,
       "tag": "0022_colossal_magneto",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "6",
+      "when": 1792210668817,
+      "tag": "0023_public_whistler",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "6",
+      "when": 1792430394460,
+      "tag": "0024_icy_the_initiative",
+      "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "6",
+      "when": 1792447200000,
+      "tag": "0025_inventory_manufacturer",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "6",
+      "when": 1792454400000,
+      "tag": "0026_production_order_reset",
+      "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "6",
+      "when": 1792498415489,
+      "tag": "0027_tricky_dakota_north",
+      "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "6",
+      "when": 1792501247254,
+      "tag": "0028_cynical_firebird",
+      "breakpoints": true
     }
   ]
 }

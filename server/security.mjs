@@ -1,3 +1,4 @@
+import {crmEpoch,checkCrmEpoch} from './crm-reset.mjs';
 import {UserError,limitedBody} from './email.mjs';
 export const identityKey=value=>String(value||'').normalize('NFC').trim().toLocaleLowerCase('pt-BR').replace(/\s+/g,' ');
 export async function audit(env,actor,action,target=''){
@@ -34,11 +35,12 @@ export async function personalActivities(request,env,actor){
  let row=await env.DB.prepare('SELECT * FROM user_activities WHERE user_id=?').bind(actor.id).first();
  if(request.method==='GET'){
   if(!row?.cache_key){const key=Array.from(crypto.getRandomValues(new Uint8Array(32)),b=>b.toString(16).padStart(2,'0')).join('');await env.DB.prepare("INSERT INTO user_activities (user_id,payload,revision,updated_at,cache_key) VALUES (?,'[]',0,?,?) ON CONFLICT(user_id) DO UPDATE SET cache_key=excluded.cache_key WHERE user_activities.cache_key IS NULL").bind(actor.id,new Date().toISOString(),key).run();row=await env.DB.prepare('SELECT * FROM user_activities WHERE user_id=?').bind(actor.id).first();}
-  return {records:JSON.parse(row.payload),revision:row.revision,cacheKey:row.cache_key};
+  return {records:JSON.parse(row.payload),revision:row.revision,cacheKey:row.cache_key,epoch:await crmEpoch(env)};
  }
  if(request.method!=='PUT')throw new UserError('Método não permitido.',405);
  if(!request.headers.get('content-type')?.startsWith('application/json'))throw new UserError('Formato inválido.',415);
  let b;try{b=JSON.parse(new TextDecoder().decode(await limitedBody(request,2*1024*1024)));}catch(e){if(e instanceof UserError)throw e;throw new UserError('Atividades inválidas.');}
+ await checkCrmEpoch(env,b.epoch);
  if(!Number.isSafeInteger(b.revision)||b.revision<0||!Array.isArray(b.records)||b.records.length>3000)throw new UserError('Atividades inválidas.');
  const seen=new Set();const records=b.records.map(r=>{
   if(!r||typeof r!=='object'||Array.isArray(r)||!Number.isSafeInteger(r.id)||seen.has(r.id)||r.importRecordId||typeof r.subject!=='string'||r.subject.length>500||typeof r.client!=='string'||r.client.length>180||typeof r.priority!=='string'||!['Normal','Alta','Urgente'].includes(r.priority))throw new UserError('Atividade inválida.');

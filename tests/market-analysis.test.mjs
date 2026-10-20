@@ -6,6 +6,16 @@ import {marketPreview,marketApply,marketComplete,marketHistory,marketData} from 
 const admin={role:'admin',authId:'11111111-1111-4111-8111-111111111111'};
 const body=value=>new Request('https://boreal.test/api/market/import',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(value)});
 
+test('Registered CEMIG sale reads Zebra from equipment and quantity/model from last sale',async()=>{
+ const {registeredSaleEquipment}=await import('../server/market-analysis.mjs');
+ const profile={hasBought:'yes',equipment:'Zebra',lastSaleDescription:'1600 ZQ-521',lastSaleDate:'2025-08-25'};
+ assert.deepEqual(registeredSaleEquipment(profile),[{brand:'Zebra',category:'Impressora móvel',description:'1600 ZQ-521',quantity:1600,deliveryDate:'2025-08-25',orderNumber:'',source:'Venda informada no cadastro'}]);
+ assert.deepEqual(registeredSaleEquipment({...profile,hasBought:'no'}),[]);
+ assert.deepEqual(registeredSaleEquipment({...profile,equipment:'Modelo não informado'}),[]);
+ assert.equal(registeredSaleEquipment({...profile,equipment:'Zebra e Urovo'})[0].quantity,null,'Ambiguous brand quantities must not be invented');
+ assert.equal(registeredSaleEquipment({...profile,equipment:'Zebra e Urovo',lastSaleDescription:'10 Zebra ZQ-521'})[0].quantity,10);
+});
+
 test('market import is admin-only and validates Brazilian UF and IBGE prefixes',async()=>{
   const env=environment(),valid={estado:'MG',codigo_ibge:'3106200',municipio:'Belo Horizonte',companhia:'Companhia A'};
   await assert.rejects(marketPreview(body({rows:[valid]}),env,{role:'commercial'}),error=>error.status===403);
@@ -52,7 +62,9 @@ test('Market matches company identities, rejects ambiguous acronyms and reflects
  const env=environment();await marketApply(body({rows:[{estado:'MG',municipio:'Belo Horizonte',companhia:entries[0].company,sigla:'COPASA'}]}),env,admin);
  env.sqlite.prepare('INSERT INTO history_clients (id,legacy_key,name,state,route_token,created_at) VALUES (?,?,?,?,?,?)').run('copasa','copasa|mg','COPASA','MG','copasa-route','2026-01-01');
  env.sqlite.prepare('INSERT INTO client_profiles (id,payload,revision,author_id,updated_by,created_at,updated_at) VALUES (?,?,1,?,?,?,?)').run('copasa',JSON.stringify(profile),admin.authId,admin.authId,'2026-01-01','2026-01-01');
- const data=await marketData(env,{role:'commercial'},'MG');assert.equal(data.entries[0].client.lastSaleDescription,'800 impressoras XM7-40');assert.equal(data.entries[0].borealClient,true);
+ const order={number:'PED-COPASA-1',delivery:{city:'Belo Horizonte',state:'MG'},items:[{kind:'equipment',brand:'Zebra',category:'Impressora móvel',description:'ZQ521',quantity:12}]};
+ env.sqlite.prepare('INSERT INTO client_orders (id,client_id,project_key,payload,status,workflow,revision,author_id,updated_by,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)').run('order-copasa','copasa','renovacao',JSON.stringify(order),'dispatched',JSON.stringify({events:[{status:'dispatched',at:'2026-10-18T10:00:00.000Z'}]}),1,admin.authId,admin.authId,'2026-10-18','2026-10-18');
+ const data=await marketData(env,{role:'commercial'},'MG');assert.equal(data.entries[0].client.lastSaleDescription,'800 impressoras XM7-40');assert.equal(data.entries[0].borealClient,true);assert.deepEqual(data.equipmentByClient.copasa,[{brand:'Zebra',category:'Impressora móvel',description:'ZQ521',quantity:12,deliveryDate:'2026-10-18',orderNumber:'PED-COPASA-1',source:'Pedido despachado/concluído'}]);
 });
 
 test('National import validates all 27 UFs, keeps same-name cities separate and reimports without duplicates',async()=>{

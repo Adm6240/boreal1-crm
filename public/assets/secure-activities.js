@@ -1,7 +1,7 @@
 (() => {
  'use strict';
  const testing=location.hostname==='boreal.test',legacyKey='boreal-activities-v1';
- let revision=0,loaded=false,queue=Promise.resolve(),failure=null,pending=null,cacheKey=null;
+ let revision=0,loaded=false,queue=Promise.resolve(),failure=null,pending=null,cacheKey=null,epoch=null;
  const key=user=>'boreal-pending-activities:'+user.id;
  async function api(method,body){const r=await fetch('/api/activities',{method,headers:body?{'Content-Type':'application/json'}:{},...(body?{body:JSON.stringify(body)}:{})});const data=await r.json();if(!r.ok)throw new Error(data.error||'Não foi possível salvar suas atividades.');return data;}
  const encode=bytes=>btoa(Array.from(new Uint8Array(bytes),b=>String.fromCharCode(b)).join(''));
@@ -15,7 +15,7 @@
   pending=structuredClone(records);
   const snapshot=structuredClone(pending);
   queue=queue.catch(()=>{}).then(async()=>{
-   try{sessionStorage.setItem(key(user),await encrypt(snapshot));const result=await api('PUT',{revision,records:snapshot});revision=result.revision;failure=null;if(JSON.stringify(pending)===JSON.stringify(snapshot)){pending=null;sessionStorage.removeItem(key(user));}}
+   try{sessionStorage.setItem(key(user),await encrypt(snapshot));const result=await api('PUT',{revision,records:snapshot,epoch});revision=result.revision;failure=null;if(JSON.stringify(pending)===JSON.stringify(snapshot)){pending=null;sessionStorage.removeItem(key(user));}}
    catch(e){failure=e;toast(e.message+' Suas alterações permanecem nesta aba.');throw e;}
   });
   queue.catch(()=>{});
@@ -26,9 +26,10 @@
  window.BorealActivitiesReady=BorealAuth.ready.then(async user=>{
   if(!['admin','coordinator','commercial'].includes(user.role)){loaded=true;activityRecords=[];refresh();return;}
   try{
-   const data=await api('GET');revision=data.revision;cacheKey=await crypto.subtle.importKey('raw',Uint8Array.from(data.cacheKey.match(/../g),x=>parseInt(x,16)),{name:'AES-GCM'},false,['encrypt','decrypt']);
+   const data=await api('GET');revision=data.revision;epoch=data.epoch||null;cacheKey=await crypto.subtle.importKey('raw',Uint8Array.from(data.cacheKey.match(/../g),x=>parseInt(x,16)),{name:'AES-GCM'},false,['encrypt','decrypt']);
+   if(epoch){const previous=localStorage.getItem('boreal-crm-epoch:'+user.id);if(previous!==epoch){localStorage.removeItem(legacyKey);sessionStorage.removeItem(key(user));localStorage.setItem('boreal-crm-epoch:'+user.id,epoch);}}
    let legacy=[];try{legacy=JSON.parse(localStorage.getItem(legacyKey)||'[]');}catch{}
-   if(testing&&!legacy.length)legacy=activityRecords.filter(r=>!r.importRecordId);
+   if(testing&&!epoch&&!legacy.length)legacy=activityRecords.filter(r=>!r.importRecordId);
    if(!Array.isArray(legacy))legacy=[];
    const norm=v=>String(v||'').normalize('NFC').trim().toLocaleLowerCase('pt-BR').replace(/\s+/g,' ');
    if(user.role==='commercial')legacy=legacy.filter(r=>norm(r.owner)===norm(user.consultantName)||norm(r.owner)===norm(user.name));

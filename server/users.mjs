@@ -7,7 +7,8 @@ const ownerEmail='admin@example.invalid';
 const normalizeEmail=value=>String(value||'').trim().toLowerCase();
 const hashToken=value=>digest(new TextEncoder().encode(value));
 const cookieName='__Host-boreal-session';
-const publicUser=row=>({id:row.id,userCode:row.user_code||row.id,email:row.email.includes('@')?row.email:'',name:row.name,role:row.role,roleName:roleNames[row.role],consultantName:row.consultant_name||'',active:!!row.active,mustChangePassword:!!row.must_change_password});
+const avatarUrl=row=>row.avatar_key?`/api/users/${row.id}/avatar?v=${encodeURIComponent(row.updated_at||'1')}`:'';
+const publicUser=row=>({id:row.id,userCode:row.user_code||row.id,email:row.email.includes('@')?row.email:'',name:row.name,role:row.role,roleName:roleNames[row.role],consultantName:row.consultant_name||'',avatarUrl:avatarUrl(row),active:!!row.active,mustChangePassword:!!row.must_change_password});
 const cookie=(token,age=28800)=>`${cookieName}=${token}; Path=/; HttpOnly; Secure; SameSite=None; Partitioned; Max-Age=${age}`;
 function sessionHeaders(token,age=28800){const headers=new Headers({'Content-Type':'application/json','Cache-Control':'no-store'});headers.append('Set-Cookie',cookie(token,age));headers.append('Set-Cookie',`${cookieName}=; Path=/; HttpOnly; Secure; SameSite=None; Max-Age=0`);return headers;}
 const tokenFrom=request=>request.headers.get('cookie')?.split(';').map(x=>x.trim()).find(x=>x.startsWith(cookieName+'='))?.slice(cookieName.length+1)||'';
@@ -82,7 +83,7 @@ async function ensureDefaultPassword(env){
  ]);
 }
 export async function listUsers(env){await ensureDefaultPassword(env);const rows=await env.DB.prepare('SELECT * FROM app_users ORDER BY name COLLATE NOCASE').all();const settings=await env.DB.prepare('SELECT id FROM auth_settings WHERE id = 1').first();return {users:(rows.results||[]).map(publicUser),hasDefaultPassword:!!settings};}
-export async function listConsultants(env){const rows=await env.DB.prepare("SELECT consultant_name FROM app_users WHERE active = 1 AND consultant_name IS NOT NULL AND trim(consultant_name) != '' ORDER BY consultant_name COLLATE NOCASE").all();const seen=new Set(),consultants=[];for(const row of rows.results||[]){const name=String(row.consultant_name).trim(),key=name.normalize('NFC').toLocaleLowerCase('pt-BR').replace(/\s+/g,' ');if(!seen.has(key)){seen.add(key);consultants.push(name);}}return {consultants};}
+export async function listConsultants(env){const rows=await env.DB.prepare("SELECT id,consultant_name,avatar_key,updated_at FROM app_users WHERE active = 1 AND consultant_name IS NOT NULL AND trim(consultant_name) != '' ORDER BY consultant_name COLLATE NOCASE").all();const seen=new Set(),consultants=[],avatars={};for(const row of rows.results||[]){const name=String(row.consultant_name).trim(),key=name.normalize('NFC').toLocaleLowerCase('pt-BR').replace(/\s+/g,' ');if(!seen.has(key)){seen.add(key);consultants.push(name);avatars[name]=avatarUrl(row);}}return {consultants,avatars};}
 async function input(request){const data=await body(request),email=normalizeEmail(data.email||(['stock','maintenance','dispatch'].includes(data.role)?data.userCode:'')),name=String(data.name||'').trim(),role=data.role,consultantName=String(data.consultantName||'').trim(),userCode=String(data.userCode||'').trim();
  if((!['stock','maintenance','dispatch'].includes(role)&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))||!email||email.length>254||!name||name.length>160||!roles.has(role)||consultantName.length>160||userCode.length>60)throw new UserError('Informe nome, e-mail, ID e perfil válidos.');
  if(role==='commercial'&&!consultantName)throw new UserError('Informe o nome do consultor usado nas metas e pedidos.');
@@ -98,4 +99,23 @@ export async function updateUser(request,env,id,actor){requireRole(actor,'admin'
  await audit(env,actor,'user_saved',id);return publicUser(await env.DB.prepare('SELECT * FROM app_users WHERE id = ?').bind(id).first());}
 export async function resetPassword(request,env,id,actor){requireRole(actor,'admin');if(id===actor.id)throw new UserError('Use Alterar minha senha na aba Conta.');const row=await env.DB.prepare('SELECT * FROM app_users WHERE id = ?').bind(id).first();if(!row)throw new UserError('Usuário não encontrado.',404);const data=await body(request),hash=await initialHash(env,data.password);
  await env.DB.batch([env.DB.prepare('UPDATE app_users SET password_hash = ?, must_change_password = 1, updated_at = ? WHERE id = ?').bind(hash,new Date().toISOString(),id),env.DB.prepare('DELETE FROM app_sessions WHERE user_id = ?').bind(id)]);await audit(env,actor,'password_reset',id);return {ok:true};}
+export async function userAvatar(request,env,id,actor){
+ const row=await env.DB.prepare('SELECT * FROM app_users WHERE id=?').bind(id).first();if(!row)throw new UserError('Usuário não encontrado.',404);
+ if(request.method==='GET'){
+  if(!row.avatar_key)throw new UserError('Foto não cadastrada.',404);const object=await env.BUCKET.get(row.avatar_key);if(!object)throw new UserError('Foto indisponível.',404);
+  const type=row.avatar_key.endsWith('.png')?'image/png':row.avatar_key.endsWith('.webp')?'image/webp':'image/jpeg';
+  return new Response(object.body,{headers:{'Content-Type':type,'Content-Length':String(object.size),'Cache-Control':'private, max-age=86400','X-Content-Type-Options':'nosniff','Content-Security-Policy':"default-src 'none'"}});
+ }
+ requireRole(actor,'admin');
+ if(request.method==='DELETE'){
+  await env.DB.prepare('UPDATE app_users SET avatar_key=NULL,updated_at=? WHERE id=?').bind(new Date().toISOString(),id).run();if(row.avatar_key)await env.BUCKET.delete(row.avatar_key);await audit(env,actor,'user_avatar_removed',id);return Response.json({user:publicUser(await env.DB.prepare('SELECT * FROM app_users WHERE id=?').bind(id).first())});
+ }
+ if(request.method!=='PUT')throw new UserError('Método não permitido.',405);
+ let form;try{form=await request.formData();}catch{throw new UserError('Selecione novamente a foto.');}const file=form.get('avatar');
+ if(!file||typeof file.arrayBuffer!=='function'||!file.size||file.size>2*1024*1024)throw new UserError('Envie uma foto JPG, PNG ou WebP de até 2 MB.');
+ const bytes=new Uint8Array(await file.arrayBuffer()),png=bytes.length>8&&bytes[0]===0x89&&bytes[1]===0x50&&bytes[2]===0x4e&&bytes[3]===0x47,jpeg=bytes.length>3&&bytes[0]===0xff&&bytes[1]===0xd8&&bytes[2]===0xff,webp=bytes.length>12&&String.fromCharCode(...bytes.slice(0,4))==='RIFF'&&String.fromCharCode(...bytes.slice(8,12))==='WEBP';
+ const ext=png?'png':jpeg?'jpg':webp?'webp':'';if(!ext)throw new UserError('O arquivo não é uma imagem JPG, PNG ou WebP válida.');
+ const key=`user-avatars/${id}/${crypto.randomUUID()}.${ext}`,now=new Date().toISOString();await env.BUCKET.put(key,bytes,{httpMetadata:{contentType:ext==='png'?'image/png':ext==='webp'?'image/webp':'image/jpeg'}});
+ try{await env.DB.prepare('UPDATE app_users SET avatar_key=?,updated_at=? WHERE id=?').bind(key,now,id).run();}catch(error){await env.BUCKET.delete(key);throw error;}if(row.avatar_key)await env.BUCKET.delete(row.avatar_key);await audit(env,actor,'user_avatar_saved',id);return Response.json({user:publicUser(await env.DB.prepare('SELECT * FROM app_users WHERE id=?').bind(id).first())});
+}
 export async function setDefaultPassword(request,env,actor){requireRole(actor,'admin');await ensureDefaultPassword(env);const data=await body(request),hash=await passwordHash(data.password);await env.DB.prepare('INSERT INTO auth_settings (id,default_hash) VALUES (1,?) ON CONFLICT(id) DO UPDATE SET default_hash = excluded.default_hash').bind(hash).run();return {ok:true};}

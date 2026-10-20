@@ -110,14 +110,15 @@ test('A generated order moves across Stock, Maintenance and Dispatch with one sh
   assert.equal((await move({module:'dispatch',action:'dispatch_prepare',revision:5})).status,200);
   env.sqlite.prepare("INSERT INTO inventory_items (id,sku,name,kind,balance,minimum,created_at) VALUES ('fixture-stock','FIXTURE','XM7-40','equipment',0,0,'2026-01-01')").run();
   env.sqlite.prepare("INSERT INTO inventory_movements VALUES ('initial','fixture-stock',10,'2026-01-01','entry',NULL,'{}','',1,'fixture','2026-01-01')").run();
-  const base={stockLines:[{itemId:'fixture-stock',quantity:2}],module:'dispatch',action:'dispatch_save',revision:6,documentType:'invoice',invoiceNumber:'NF-1234',carrier:'Transportadora',carrierName:'Transportes MG',volumeCount:3,serialChecked:false,equipmentSerials:[{itemIndex:0,serial:'S100'},{itemIndex:0,serial:'S101'}],serialNotes:'Série conferida no lote A'};
-  for(const bad of [{documentType:'outro'},{invoiceNumber:''},{carrier:'Táxi'},{carrierName:''},{volumeCount:0},{serialChecked:null}]){
+  const serialRows=[{itemIndex:0,unitIndex:0,equipment:'S100',seal:'L100',battery:'B100',charger:'F100'},{itemIndex:0,unitIndex:1,equipment:'S101',seal:'L101',battery:'B101',charger:'F101'}];
+  const base={stockLines:[{itemId:'fixture-stock',quantity:2}],module:'dispatch',action:'dispatch_save',revision:6,documentType:'invoice',invoiceNumber:'NF-1234',carrier:'Transportadora',carrierName:'Transportes MG',volumeCount:3,serialChecked:false,equipmentSerials:[{itemIndex:0,serial:'S100'},{itemIndex:0,serial:'S101'}],serialRows,serialNotes:'Série conferida no lote A'};
+  for(const bad of [{documentType:'outro'},{invoiceNumber:''},{carrier:'Táxi'},{carrierName:''},{volumeCount:0},{serialChecked:null},{serialRows:serialRows.map((row,index)=>index?row:{...row,charger:''})}]){
     assert.equal((await move({...base,...bad})).status,400);
   }
   assert.equal((await move(base)).status,200);
   assert.equal((await move({module:'dispatch',action:'dispatch',revision:7,approved:true,dispatchAt:'2026-09-25'})).status,400);
   const prepared=await move({...base,revision:7,serialChecked:true});assert.equal(prepared.status,200);
-  const shipping=(await prepared.json()).order.workflow.shipping;assert.equal(shipping.invoiceNumber,'NF-1234');assert.equal(shipping.carrierName,'Transportes MG');assert.equal(shipping.volumeCount,3);assert.equal(shipping.serialChecked,true);
+  const shipping=(await prepared.json()).order.workflow.shipping;assert.equal(shipping.invoiceNumber,'NF-1234');assert.equal(shipping.carrierName,'Transportes MG');assert.equal(shipping.volumeCount,3);assert.equal(shipping.serialChecked,true);assert.deepEqual(shipping.serialRows,serialRows);
   const declaration=await move({...base,revision:8,documentType:'declaration',invoiceNumber:'',carrier:'Latam',carrierName:'',serialChecked:true});assert.equal(declaration.status,200);
   const changedShipping=(await declaration.json()).order.workflow.shipping;assert.equal(changedShipping.invoiceNumber,null);assert.equal(changedShipping.carrier,'Latam');
   assert.equal((await move({module:'dispatch',action:'dispatch',revision:9,approved:true,dispatchAt:'2026-09-25'})).status,200);

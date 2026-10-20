@@ -67,7 +67,7 @@
     if(action==='dispatch_prepare')return `<p>O pedido passará para Em preparo. Preencha o documento, o transporte, os volumes e a conferência dos números de série antes de enviá-lo.</p>`;
     if(action==='dispatch_save'){
       const shipping=selected.workflow.shipping||{};
-      return `<div id="dispatchStockSelection"><p>Carregando itens do estoque…</p></div><label>Documento de envio<select name="documentType" required><option value="">Selecione</option><option value="invoice" ${shipping.documentType==='invoice'?'selected':''}>Nota fiscal</option><option value="declaration" ${shipping.documentType==='declaration'?'selected':''}>Declaração de conteúdo</option></select></label><label data-invoice>Número da nota fiscal<input name="invoiceNumber" maxlength="80" value="${escape(shipping.invoiceNumber||'')}" placeholder="Informe o número da nota"></label><label>Transporte<select name="carrier" required><option value="">Selecione</option>${['Correios','Latam','Interna','Transportadora'].map(name=>`<option ${shipping.carrier===name?'selected':''}>${name}</option>`).join('')}</select></label><label data-carrier-name>Nome da transportadora<input name="carrierName" maxlength="160" value="${escape(shipping.carrierName||'')}"></label><label>Quantidade de volumes / caixas<input name="volumeCount" type="number" min="1" max="100000" step="1" required value="${shipping.volumeCount||''}"></label><fieldset><legend>Números de série retirados e conferidos?</legend><label class="workflow-radio"><input type="radio" name="serialChecked" value="yes" required ${shipping.serialChecked===true?'checked':''}> Sim</label><label class="workflow-radio"><input type="radio" name="serialChecked" value="no" ${shipping.serialChecked===false?'checked':''}> Não</label></fieldset>${selected.items.map((item,i)=>item.kind==='equipment'?`<label>${escape(item.description)} · ${item.quantity} série(s)<textarea name="equipmentSerials_${i}" required rows="4" maxlength="240000" placeholder="Uma série por linha">${escape((shipping.equipmentSerials||[]).filter(e=>e.itemIndex===i).map(e=>e.serial).join('\n'))}</textarea></label>`:'').join('')}<label>Números de série / observações <span class="order-optional">Opcional</span><textarea name="serialNotes" maxlength="3000" rows="3">${escape(shipping.serialNotes||'')}</textarea></label>`;
+      return `<div id="dispatchStockSelection"><p>Carregando itens do estoque e a tabela de seriais…</p></div><label>Documento de envio<select name="documentType" required><option value="">Selecione</option><option value="invoice" ${shipping.documentType==='invoice'?'selected':''}>Nota fiscal</option><option value="declaration" ${shipping.documentType==='declaration'?'selected':''}>Declaração de conteúdo</option></select></label><label data-invoice>Número da nota fiscal<input name="invoiceNumber" maxlength="80" value="${escape(shipping.invoiceNumber||'')}" placeholder="Informe o número da nota"></label><label>Transporte<select name="carrier" required><option value="">Selecione</option>${['Correios','Latam','Interna','Transportadora'].map(name=>`<option ${shipping.carrier===name?'selected':''}>${name}</option>`).join('')}</select></label><label data-carrier-name>Nome da transportadora<input name="carrierName" maxlength="160" value="${escape(shipping.carrierName||'')}"></label><label>Quantidade de volumes / caixas<input name="volumeCount" type="number" min="1" max="100000" step="1" required value="${shipping.volumeCount||''}"></label><fieldset><legend>Números de série retirados e conferidos?</legend><label class="workflow-radio"><input type="radio" name="serialChecked" value="yes" required ${shipping.serialChecked===true?'checked':''}> Sim</label><label class="workflow-radio"><input type="radio" name="serialChecked" value="no" ${shipping.serialChecked===false?'checked':''}> Não</label></fieldset><label>Observação <span class="order-optional">Opcional</span><textarea name="serialNotes" maxlength="3000" rows="3" placeholder="Informações adicionais sobre o preparo ou envio">${escape(shipping.serialNotes||'')}</textarea></label>`;
     }
     if(action==='dispatch')return `<label>Data de despacho<input type="date" name="dispatchAt" required value="${today()}"></label><label class="workflow-radio"><input type="checkbox" name="approved" required> Conferi o pedido e autorizo o despacho</label>`;
     if(action==='stock_complete')return `<label>Data de recebimento pelo cliente<input type="date" name="receivedAt" required min="${escape(selected.workflow.dispatchAt||'')}" value="${today()}"></label>`;
@@ -77,7 +77,7 @@
     const order=orders.find(item=>item.id===id);if(!order)return;
     selected=order;previousFocus=document.activeElement;
     const area=document.querySelector('.order-area.active')?.id,action=stepFor(order,area);
-    overlay.dataset.action=action||'';overlay.dataset.module=area||'';overlay.hidden=false;
+    overlay.dataset.action=action||'';overlay.dataset.module=area||'';overlay.hidden=false;document.body.classList.add('workflow-open');
     el('workflowTitle').textContent=`Pedido ${order.orderRef||'pendente de numeração'}`;
     const address=order.delivery;
     const shipping=order.workflow.shipping;
@@ -89,7 +89,7 @@
     el('workflowSend').disabled=false;updateDispatchFields();
     el('workflowError').textContent='';overlay.querySelector('[role="dialog"]').focus();
   }
-  function close(){if(saving)return;overlay.hidden=true;selected=null;previousFocus?.focus();}
+  function close(){if(saving)return;overlay.hidden=true;document.body.classList.remove('workflow-open');selected=null;previousFocus?.focus();}
   function updateDispatchFields(){
     if(overlay.dataset.action!=='dispatch_save')return;
     const invoice=form.elements.namedItem('documentType').value==='invoice',carrier=form.elements.namedItem('carrier').value==='Transportadora';
@@ -119,8 +119,7 @@
     }
     if(action==='maintenance_finish')body.configurationNotes=form.elements.namedItem('configurationNotes').value;
     if(action==='dispatch_save'){
-      try{body.stockLines=window.BorealInventory.readDispatch();}catch(error){el('workflowError').textContent=error.message;return;}
-      body.equipmentSerials=selected.items.flatMap((item,i)=>item.kind==='equipment'?form.elements.namedItem('equipmentSerials_'+i).value.split(/\r?\n/).map(v=>v.trim()).filter(Boolean).map(serial=>({itemIndex:i,serial})):[]);
+      try{body.stockLines=window.BorealInventory.readDispatch();const serialData=window.BorealSerialStock?.readDispatch();body.serialRows=serialData?.rows||[];body.equipmentSerials=body.serialRows.map(row=>({itemIndex:row.itemIndex,serial:row.equipment}));body.serialStock=serialData?{unitIds:serialData.unitIds,fingerprint:serialData.fingerprint,allowKitBreak:serialData.allowKitBreak}:null;}catch(error){el('workflowError').textContent=error.message;return;}
       body.documentType=form.elements.namedItem('documentType').value;
       body.invoiceNumber=form.elements.namedItem('invoiceNumber').value;
       body.carrier=form.elements.namedItem('carrier').value;

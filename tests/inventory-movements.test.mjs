@@ -8,10 +8,14 @@ test('Order number is exact; search returns the printer and its linked accessori
  const env=environment();kitHistory(env,{legacy:true});kitHistory(env,{number:'59470',condition:'new'});
  const result=await read(env,{number:'5947',q:'Cliente de teste'});assert.equal(result.movements.length,1);const parent=result.movements[0];assert.equal(parent.name,'Impressora');assert.equal(parent.children.length,4);assert.deepEqual(parent.children.map(c=>c.name).sort(),['Bateria','Cabo tipo C','Capa de proteção','Carregador'].sort());assert.equal(parent.context.contact,'Solicitante de teste');assert.ok(parent.children.every(c=>c.context.number==='5947'&&c.itemCondition==='used'));
  const searchAccessory=await read(env,{q:'Cabo tipo C',number:'5947'});assert.equal(searchAccessory.movements[0].name,'Impressora');assert.equal(searchAccessory.movements[0].children.length,4);
+ const exactAccessory=await read(env,{itemId:'Cabo tipo C-used-XM7-40',number:'5947',direction:'exit'});assert.equal(exactAccessory.movements.length,1);assert.equal(exactAccessory.movements[0].name,'Cabo tipo C');assert.equal(exactAccessory.movements[0].children.length,0);
+ const exactPrinter=await read(env,{itemId:'Impressora-used-XM7-40',number:'5947'});assert.equal(exactPrinter.movements.length,1);assert.equal(exactPrinter.movements[0].name,'Impressora');
+ assert.equal((await read(env,{itemId:'Cabo tipo C-used-XM7-40',number:'5947',direction:'entry'})).movements.length,0);
  assert.equal((await read(env,{q:'Solicitante de teste',number:'5947'})).movements.length,1);
  assert.equal((await read(env,{number:'5947',condition:'new'})).movements.length,0);
  assert.equal((await read(env,{condition:'new'})).movements[0].context.number,'59470');
  assert.equal((await worker.fetch(request('/api/inventory/movements?condition=bad'),env)).status,400);
+ assert.equal((await worker.fetch(request('/api/inventory/movements?direction=bad'),env)).status,400);
 });
 test('Grouping keeps dates, customers, projects and standalone accessories separate and avoids ambiguous parents',async()=>{
  const env=environment();kitHistory(env);kitHistory(env,{date:'2026-10-12'});kitHistory(env,{client:'Outro cliente'});kitHistory(env,{project:'Outro projeto'});historyLine(env,{number:'Avulso',part:'Bateria'});

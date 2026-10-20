@@ -12,3 +12,24 @@ function populateGoalSettings(){const settings=goalSettings();document.getElemen
 document.getElementById('addGoalConsultant').addEventListener('click',()=>{document.getElementById('consultantGoalRows').insertAdjacentHTML('beforeend','<div class="consultant-goal-row"><input class="goal-name" placeholder="Nome do consultor" aria-label="Nome do consultor"><input class="goal-target" type="number" min="0" step="1" value="0" aria-label="Meta anual"><span class="goal-share">0%</span><button type="button" class="remove-consultant" aria-label="Remover consultor">×</button></div>');bindConsultantRows();updateGoalSettingsPreview()});
 goalForm.addEventListener('submit',async event=>{event.preventDefault();if(!allowedGoalRoles.includes(currentAccountRole()))return;updateGoalSettingsPreview();const annual={};for(const row of document.querySelectorAll('.consultant-goal-row')){const name=row.querySelector('.goal-name').value.trim(),target=Number(row.querySelector('.goal-target').value)||0;if(!name){toast('Informe o nome de todos os consultores');return}annual[name]=target}try{await window.applySalesGoals({year:Number(document.getElementById('settingsGoalYear').value),generalTarget:Number(document.getElementById('settingsGeneralGoal').value),superPercent:Number(document.getElementById('settingsSuperPercent').value),generalBonusPercent:Number(document.getElementById('settingsGeneralBonus').value),superBonusPercent:Number(document.getElementById('settingsSuperBonus').value),annual});const stamp=new Date().toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'});localStorage.setItem('boreal-goals-updated-at',stamp);document.getElementById('goalSettingsUpdated').textContent='Atualizado em '+stamp;toast('Metas e regras de bonificação salvas')}catch(error){toast(error.message)}});
 window.BorealAuth.ready.then(user=>{goalForm.hidden=!allowedGoalRoles.includes(user.role);accessDenied.hidden=!goalForm.hidden;});
+window.BorealActivitySettings={scheduleNext:true};
+const activitySettingsForm=document.getElementById('activitySettingsForm');
+window.BorealActivitySettingsReady=window.BorealAuth.ready.then(async user=>{
+  if(!['admin','coordinator','commercial'].includes(user.role))return;
+  activitySettingsForm.querySelector('button[type="submit"]').hidden=user.role!=='admin';
+  document.getElementById('scheduleNextActivity').disabled=user.role!=='admin';
+  try{
+    const response=await fetch('/api/activities/config');if(!response.ok)throw new Error('Configuração indisponível.');
+    const settings=await response.json();window.BorealActivitySettings.scheduleNext=settings.scheduleNext;
+    document.getElementById('scheduleNextActivity').checked=settings.scheduleNext;
+  }catch(error){document.getElementById('activitySettingsStatus').textContent=error.message;}
+});
+activitySettingsForm.addEventListener('submit',async event=>{
+  event.preventDefault();if(window.BorealAuth.user?.role!=='admin')return;
+  const checkbox=document.getElementById('scheduleNextActivity'),button=document.getElementById('saveActivitySettings'),status=document.getElementById('activitySettingsStatus');button.disabled=true;
+  try{
+    const response=await fetch('/api/activities/config',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({scheduleNext:checkbox.checked})});
+    const data=await response.json();if(!response.ok)throw new Error(data.error||'Não foi possível salvar a configuração.');
+    window.BorealActivitySettings.scheduleNext=data.scheduleNext;status.textContent='Configuração salva para toda a equipe.';toast(status.textContent);
+  }catch(error){checkbox.checked=window.BorealActivitySettings.scheduleNext;status.textContent=error.message;toast(error.message)}finally{button.disabled=false;}
+});

@@ -1,3 +1,4 @@
+import {validateSerialDispatch,serialDispatchStatements} from './inventory-serials.mjs';
 import {UserError,limitedBody} from './email.mjs';
 import {orderData} from './orders.mjs';
 import {normalizeSerial, validateSerials, equipmentStatements} from './maintenance.mjs';
@@ -18,6 +19,16 @@ const technicians=new Set(['Daniel','Felipe M.','Vitor']);
 const carriers=new Set(['Correios','Latam','Interna','Transportadora']);
 const datePattern=/^\d{4}-\d{2}-\d{2}$/;
 function date(value,label){if(typeof value!=='string'||!datePattern.test(value)||Number.isNaN(Date.parse(value+'T12:00:00Z'))||new Date(value+'T12:00:00Z').toISOString().slice(0,10)!==value)throw new UserError(`Informe a ${label} válida.`);return value;}
+function validateSerialRows(value,items,equipmentSerials){
+  if(value===undefined)return null;
+  if(!Array.isArray(value)||value.length>2000)throw new UserError('Confira a tabela de seriais.');
+  const clean=(v,label)=>{if(typeof v!=='string'||!v.trim()||v.length>120||/[\x00-\x1f]/.test(v))throw new UserError(`Informe ${label} em todas as linhas da tabela.`);return v.trim();};
+  const rows=value.map((row,index)=>{if(!row||typeof row!=='object'||!Number.isSafeInteger(row.itemIndex)||items[row.itemIndex]?.kind!=='equipment'||!Number.isSafeInteger(row.unitIndex)||row.unitIndex<0)throw new UserError('Linha inválida na tabela de seriais.');return {itemIndex:row.itemIndex,unitIndex:row.unitIndex,equipment:clean(row.equipment,'o S/N do equipamento'),seal:clean(row.seal,'o lacre'),battery:clean(row.battery,'o S/N da bateria'),charger:clean(row.charger,'o S/N da fonte')};});
+  items.forEach((item,itemIndex)=>{if(item.kind!=='equipment')return;const expected=Array.from({length:item.quantity},(_,unitIndex)=>`${itemIndex}:${unitIndex}`),actual=rows.filter(row=>row.itemIndex===itemIndex).map(row=>`${row.itemIndex}:${row.unitIndex}`);if(actual.length!==expected.length||expected.some(key=>!actual.includes(key)))throw new UserError(`Preencha uma linha completa por unidade de ${item.description}.`);});
+  for(const field of ['equipment','seal','battery','charger']){const seen=new Set();for(const row of rows){const key=normalizeSerial(row[field]);if(seen.has(key))throw new UserError(`${field==='seal'?'Lacre':'Número de série'} repetido na tabela: ${row[field]}`);seen.add(key);}}
+  if(rows.some(row=>!equipmentSerials.some(entry=>entry.itemIndex===row.itemIndex&&normalizeSerial(entry.serial)===normalizeSerial(row.equipment))))throw new UserError('Os números de série da tabela não correspondem aos equipamentos do pedido.');
+  return rows;
+}
 
 export async function listWorkflowOrders(env){
   const rows=await env.DB.prepare('SELECT * FROM client_orders ORDER BY created_at DESC').all();
@@ -26,13 +37,13 @@ export async function listWorkflowOrders(env){
 
 export async function advanceWorkflow(request,env,id,user){
   if(!request.headers.get('content-type')?.startsWith('application/json'))throw new UserError('Formato inválido.',415);
-  let body;try{body=JSON.parse(new TextDecoder().decode(await limitedBody(request,262144)));}catch(error){if(error instanceof UserError)throw error;throw new UserError('Dados da movimentação inválidos.');}
+  let body;try{body=JSON.parse(new TextDecoder().decode(await limitedBody(request,1048576)));}catch(error){if(error instanceof UserError)throw error;throw new UserError('Dados da movimentação inválidos.');}
   if(!body||typeof body!=='object'||!Number.isSafeInteger(body.revision))throw new UserError('Reabra o pedido antes de movimentá-lo.');
   const step=body.action==='stock_warranty'?{module:'stock',from:null,to:null,label:'Garantia e data de venda cadastradas'}:steps[body.action];if(!step||body.module!==step.module)throw new UserError('Ação indisponível para este setor.',403);
   const row=await env.DB.prepare('SELECT * FROM client_orders WHERE id = ?').bind(id).first();
   if(!row)throw new UserError('Pedido não encontrado.',404);
   if((step.from&&row.status!==step.from)||row.revision!==body.revision)throw new UserError('O pedido mudou de etapa. Atualize a tela antes de continuar.',409);
-  const workflow=JSON.parse(row.workflow||'{}'),now=new Date().toISOString();let orderRef=row.order_ref,details={};
+  const workflow=JSON.parse(row.workflow||'{}'),now=new Date().toISOString();let serialPlan=null;let orderRef=row.order_ref,details={};
   if(body.action==='stock_intake'){
     if(typeof body.available!=='boolean')throw new UserError('Informe se há mercadoria disponível.');
     orderRef=String(body.orderRef||'').trim();
@@ -71,10 +82,11 @@ export async function advanceWorkflow(request,env,id,user){
     if(typeof body.serialChecked!=='boolean')throw new UserError('Informe se os números de série foram retirados e conferidos.');
     const serialNotes=typeof body.serialNotes==='string'?body.serialNotes.trim():'';
     if(serialNotes.length>3000)throw new UserError('As observações de número de série podem ter até 3.000 caracteres.');
-    const equipmentSerials=validateSerials(body.equipmentSerials,JSON.parse(row.payload).items);
+    const items=JSON.parse(row.payload).items,equipmentSerials=validateSerials(body.equipmentSerials,items),serialRows=validateSerialRows(body.serialRows,items,equipmentSerials);
     for(const entry of equipmentSerials){const prior=await env.DB.prepare('SELECT order_id FROM service_equipment WHERE serial_key=?').bind(normalizeSerial(entry.serial)).first();if(prior&&prior.order_id!==id)throw new UserError('Número de série já registrado em outro pedido: '+entry.serial,409);}
     const stockLines=await validateStockLines(env,body.stockLines);
-    workflow.shipping={stockLines,equipmentSerials,documentType,invoiceNumber:documentType==='invoice'?invoiceNumber:null,carrier:body.carrier,carrierName:body.carrier==='Transportadora'?carrierName:null,volumeCount:body.volumeCount,serialChecked:body.serialChecked,serialNotes};
+    serialPlan=await validateSerialDispatch(env,stockLines,body.serialStock,equipmentSerials);
+    workflow.shipping={serialStock:serialPlan.units.length?{unitIds:serialPlan.units.map(u=>u.id),fingerprint:serialPlan.fingerprint,allowKitBreak:body.serialStock?.allowKitBreak===true}:null,stockLines,equipmentSerials,...(serialRows?{serialRows}:{}),documentType,invoiceNumber:documentType==='invoice'?invoiceNumber:null,carrier:body.carrier,carrierName:body.carrier==='Transportadora'?carrierName:null,volumeCount:body.volumeCount,serialChecked:body.serialChecked,serialNotes};
     details={documentType,carrier:body.carrier,volumeCount:body.volumeCount,serialChecked:body.serialChecked};
   }
   if(body.action==='dispatch'){
@@ -83,6 +95,7 @@ export async function advanceWorkflow(request,env,id,user){
     validateSerials(workflow.shipping.equipmentSerials,JSON.parse(row.payload).items);
     if(!Number.isSafeInteger(workflow.warrantyMonths)||!workflow.saleAt)throw new UserError('Este pedido antigo não tem garantia e data de venda. Cadastre esses dados antes do envio.');
     workflow.shipping.stockLines=await validateStockLines(env,workflow.shipping.stockLines);
+    serialPlan=await validateSerialDispatch(env,workflow.shipping.stockLines,workflow.shipping.serialStock,workflow.shipping.equipmentSerials);
     workflow.dispatchAt=date(body.dispatchAt,'data de despacho');if(workflow.dispatchAt<workflow.saleAt)throw new UserError('Despacho anterior à venda.');details={dispatchAt:workflow.dispatchAt};
   }
   if(body.action==='stock_complete'){
@@ -94,8 +107,8 @@ export async function advanceWorkflow(request,env,id,user){
   workflow.events=[...(workflow.events||[]),{action:body.action,label:status==='dispatch_pending'&&step.module==='stock'?'Mercadoria disponível; enviado à Expedição':step.label,status,at:now,by:user,...details}];
   let updated;
   try{const update=env.DB.prepare('UPDATE client_orders SET status = ?, order_ref = ?, workflow = ?, revision = revision + 1, updated_by = ?, updated_at = ? WHERE id = ? AND status = ? AND revision = ? RETURNING *').bind(status,orderRef,JSON.stringify(workflow),user,now,id,row.status,row.revision);
-    if(body.action==='dispatch'){const results=await env.DB.batch([update,...stockDispatchStatements(env,row,workflow,now),...equipmentStatements(env,row,workflow,now)]);updated=results[0].results?.[0];}else updated=await update.first();}
-  catch(error){if(String(error).includes('inventory_nonnegative'))throw new UserError('Saldo insuficiente para o despacho. Revise os itens ou registre a entrada da mercadoria.',409);if(String(error).includes('UNIQUE'))throw new UserError('Este número já pertence a outro pedido.',409);throw error;}
+    if(body.action==='dispatch'){const results=await env.DB.batch([update,...serialDispatchStatements(env,row,workflow,serialPlan,now),...stockDispatchStatements(env,row,workflow,now),...equipmentStatements(env,row,workflow,now)]);updated=results[0].results?.[0];}else updated=await update.first();}
+  catch(error){if(/serial_revision|serial_balance|idx_serial_kit_slot|idx_serial_shortage/.test(String(error)))throw new UserError('O estoque por seriais mudou. Atualize a separação antes de despachar.',409);if(String(error).includes('inventory_nonnegative'))throw new UserError('Saldo insuficiente para o despacho. Revise os itens ou registre a entrada da mercadoria.',409);if(String(error).includes('UNIQUE'))throw new UserError('Este número já pertence a outro pedido.',409);throw error;}
   if(!updated)throw new UserError('O pedido mudou de etapa. Atualize a tela antes de continuar.',409);
   if(status==='completed'){
     const project=JSON.parse(updated.payload)?.snapshot?.project;

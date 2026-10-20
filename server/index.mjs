@@ -1,3 +1,5 @@
+import {maintenanceReset,resetApi} from './crm-reset.mjs';
+import {serialApi} from './inventory-serials.mjs';
 import {inventoryImportRemoval} from './inventory-import-removal.mjs';
 import {maintenanceApi} from './maintenance.mjs';
 import {requireClient,allowedClients,accessApi,personalActivities,secureResponse,audit} from './security.mjs';
@@ -10,10 +12,11 @@ import {listOrders,saveOrder,listGoalActuals} from './orders.mjs';
 import {inventoryApi} from './inventory.mjs';
 import {inventoryImportApi} from './inventory-import.mjs';
 import {listWorkflowOrders,advanceWorkflow} from './order-workflow.mjs';
-import {listProfiles,saveProfile,deleteProfile,classifyProfile} from './clients.mjs';
+import {listProfiles,saveProfile,savePreRegistration,deleteProfile,classifyProfile,assignConsultant} from './clients.mjs';
 import {listCoverage} from './coverage.mjs';
-import {currentUser,requireRole,listUsers,listConsultants,createUser,updateUser,login,logout,changePassword,resetPassword,setDefaultPassword} from './users.mjs';
+import {currentUser,requireRole,listUsers,listConsultants,createUser,updateUser,login,logout,changePassword,resetPassword,setDefaultPassword,userAvatar} from './users.mjs';
 import {readGoalSettings,saveGoalSettings} from './goals-settings.mjs';
+import {readActivitySettings,saveActivitySettings} from './activity-settings.mjs';
 import {listProjectStages,saveProjectStage} from './project-stages.mjs';
 
 const json=(data,status=200)=>new Response(JSON.stringify(data),{status,headers:{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});
@@ -68,13 +71,16 @@ async function api(request,env,url){
   bindings(env);
   if(url.pathname==='/api/client-history/inbound' && request.method==='POST')return receiveCopy(request,env);
   if(request.method!=='GET' && request.method!=='HEAD')requireOrigin(request);
+  if(url.pathname==='/api/maintenance/crm-reset-20261020')return json(await maintenanceReset(request,env));
   if(url.pathname==='/api/auth/login' && request.method==='POST')return login(request,env);
   if(url.pathname==='/api/auth/logout' && request.method==='POST')return logout(request,env);
   const auth=await currentUser(request,env),user=auth.authId;
   const ensureForUser=(e,c)=>ensureClient(e,c,auth);
   if(url.pathname==='/api/auth/password' && request.method==='POST')return changePassword(request,env,auth);
   if(url.pathname==='/api/me' && request.method==='GET')return json({user:auth});
-  if(auth.mustChangePassword)throw new UserError('Defina sua senha pessoal antes de continuar.',403);
+  const inventoryReset=url.pathname==='/api/inventory/reset'&&request.method==='POST';
+  if(auth.mustChangePassword&&!inventoryReset)throw new UserError('Defina sua senha pessoal antes de continuar.',403);
+  if(url.pathname==='/api/crm-reset')return json(await resetApi(request,env,auth));
   if(url.pathname==='/api/activities')return json(await personalActivities(request,env,auth));
   const accessMatch=url.pathname.match(/^\/api\/clients\/([a-f0-9-]{36})\/access$/);
   if(accessMatch)return json(await accessApi(request,env,auth,accessMatch[1]));
@@ -94,6 +100,8 @@ async function api(request,env,url){
   if(url.pathname==='/api/users' && request.method==='GET'){requireRole(auth,'admin');return json(await listUsers(env));}
   if(url.pathname==='/api/consultants' && request.method==='GET'){requireRole(auth,'admin','coordinator','commercial');return json(await listConsultants(env));}
   if(url.pathname==='/api/users' && request.method==='POST')return json({user:await createUser(request,env,auth)},201);
+  const avatarMatch=url.pathname.match(/^\/api\/users\/([a-f0-9-]{36})\/avatar$/);
+  if(avatarMatch)return userAvatar(request,env,avatarMatch[1],auth);
   const userMatch=url.pathname.match(/^\/api\/users\/([a-f0-9-]{36})$/);
   if(userMatch && request.method==='PUT')return json({user:await updateUser(request,env,userMatch[1],auth)});
   if(url.pathname==='/api/sales-history' && request.method==='GET')return json(await salesHistory(env,auth));
@@ -101,6 +109,8 @@ async function api(request,env,url){
   if(url.pathname==='/api/sales-history/apply' && request.method==='POST')return json(await applySalesHistory(request,env,auth));
   if(url.pathname==='/api/goals/config' && request.method==='GET')return json(await readGoalSettings(env,auth));
   if(url.pathname==='/api/goals/config' && request.method==='PUT')return json(await saveGoalSettings(request,env,auth));
+  if(url.pathname==='/api/activities/config' && request.method==='GET')return json(await readActivitySettings(env,auth));
+  if(url.pathname==='/api/activities/config' && request.method==='PUT')return json(await saveActivitySettings(request,env,auth));
   if(url.pathname==='/api/imports/preview' && request.method==='POST'){const p=await planImport(env,await importBody(request),auth);return json({counts:p.counts,issues:p.issues,ready:p.ready.map(i=>({kind:i.kind,key:i.key,line:i.line,label:i.label,owner:i.owner}))});}
   if(url.pathname==='/api/imports/apply' && request.method==='POST')return json(await applyImport(env,await importBody(request),auth));
   if(url.pathname==='/api/imports/history' && request.method==='GET')return json(await importHistory(env,auth));
@@ -138,16 +148,20 @@ async function api(request,env,url){
     return json(result);
   }
   if(url.pathname==='/api/clients' && request.method==='POST'){requireRole(auth,'admin','coordinator','commercial');return json({client:await saveProfile(request,env,null,ensureForUser,user,auth)},201);}
+  if(url.pathname==='/api/clients/pre-registration' && request.method==='POST'){requireRole(auth,'admin','coordinator','commercial');return json({client:await savePreRegistration(request,env,ensureForUser,user,auth)});}
   const clientMatch=url.pathname.match(/^\/api\/clients\/([a-f0-9-]{36})$/);
   if(clientMatch && request.method==='PUT'){requireRole(auth,'admin','coordinator','commercial');return json({client:await saveProfile(request,env,clientMatch[1],ensureForUser,user)});}
   if(clientMatch && request.method==='DELETE'){requireRole(auth,'admin');return json(await deleteProfile(request,env,clientMatch[1]));}
   const classificationMatch=url.pathname.match(/^\/api\/clients\/([a-f0-9-]{36})\/classification$/);
   if(classificationMatch && request.method==='PATCH'){requireRole(auth,'admin','coordinator','commercial');return json({client:await classifyProfile(request,env,classificationMatch[1],user)});}
+  const consultantMatch=url.pathname.match(/^\/api\/clients\/([a-f0-9-]{36})\/consultant$/);
+  if(consultantMatch && request.method==='PATCH'){requireRole(auth,'admin','coordinator');return json(await assignConsultant(request,env,consultantMatch[1],user));}
   if(url.pathname==='/api/client-orders' && request.method==='GET'){requireRole(auth,'admin','coordinator','commercial');const orders=await listOrders(env,await lookupClient(env,context(url)));return json({orders:auth.role==='commercial'?orders.filter(order=>order.snapshot.consultant.toLocaleLowerCase('pt-BR')===auth.consultantName.toLocaleLowerCase('pt-BR')):orders});}
   if(url.pathname==='/api/project-stages' && request.method==='GET'){requireRole(auth,'admin','coordinator','commercial');return json({stages:await listProjectStages(env,await lookupClient(env,context(url)))});}
   if(url.pathname==='/api/project-stages' && request.method==='PUT'){requireRole(auth,'admin','coordinator','commercial');const client=await ensureForUser(env,context(url));return json({project:await saveProjectStage(request,env,client,user)});}
   if(url.pathname.startsWith('/api/inventory/import-trash')||/^\/api\/inventory\/imports\/[^/]+\/removal$/.test(url.pathname))return json(await inventoryImportRemoval(request,env,url,auth,user));
   if(url.pathname.startsWith('/api/inventory/imports'))return json(await inventoryImportApi(request,env,url,auth,user));
+  if(url.pathname.startsWith('/api/inventory/serial-stock'))return json(await serialApi(request,env,url,auth,user));
   if(url.pathname==='/api/inventory'||url.pathname.startsWith('/api/inventory/'))return json(await inventoryApi(request,env,url,auth,user));
   if(url.pathname==='/api/orders/workflow' && request.method==='GET'){requireRole(auth,'admin','coordinator','commercial','stock','maintenance','dispatch');const result=await listWorkflowOrders(env);if(auth.role==='maintenance')result.orders=result.orders.filter(order=>['maintenance','maintenance_in_progress','dispatch_pending','dispatch_preparing','dispatched','completed'].includes(order.status));if(auth.role==='dispatch')result.orders=result.orders.filter(order=>['dispatch_pending','dispatch_preparing','dispatched','completed'].includes(order.status));return json({...result,orders:auth.role==='commercial'?result.orders.filter(order=>order.snapshot.consultant.toLocaleLowerCase('pt-BR')===auth.consultantName.toLocaleLowerCase('pt-BR')):result.orders});}
   const workflowMatch=url.pathname.match(/^\/api\/orders\/workflow\/([a-f0-9-]{36})$/);

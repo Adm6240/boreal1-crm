@@ -1,18 +1,18 @@
 const categories=new Set(['Impressora móvel','Impressora de mesa','Coletor de dados','Outro equipamento']);
 const knownBrands=['Bixolon','Zebra','Urovo'];
 
-function brandFor(item){
+export function brandFor(item){
   const supplied=String(item.brand||'').trim();
   const known=knownBrands.find(name=>new RegExp(`\\b${name}\\b`,'i').test(supplied||item.description||''));
   return known||supplied||'Não informada';
 }
 
-function categoryFor(item){
+export function categoryFor(item){
   if(categories.has(item.category))return item.category;
   const model=String(item.description||'').toUpperCase();
-  if(/\b(?:XM7|SPP|ZQ[0-9]|RW[0-9])[-\w]*/.test(model))return 'Impressora móvel';
-  if(/\b(?:XD[0-9]|SRP[0-9]|ZD[0-9]|ZT[0-9])[-\w]*/.test(model))return 'Impressora de mesa';
-  if(/\b(?:TC[0-9]|MC[0-9]|CT[0-9]|DT[0-9]|RT[0-9]|ET[0-9])[-\w]*/.test(model))return 'Coletor de dados';
+  if(/\b(?:XM7|SPP|ZQ[- ]?[0-9]|RW[- ]?[0-9])[-\w]*/.test(model))return 'Impressora móvel';
+  if(/\b(?:XD|SRP|ZD|ZT)[- ]?[0-9][-\w]*/.test(model))return 'Impressora de mesa';
+  if(/\b(?:TC|MC|CT|DT|RT|ET)[- ]?[0-9][-\w]*/.test(model))return 'Coletor de dados';
   return 'Outro equipamento';
 }
 

@@ -1,6 +1,8 @@
 # Boreal Workstation
 
-Código preparado para o repositório Adm6240/boreal1-crm em 20/10/2026.
+Código da versão 124 do Boreal Workstation, preparado para o repositório Adm6240/boreal1-crm em 20/10/2026.
+
+Origem: commit `f3b901b4aaee2295ef747d0fac2a5ff5d7444d76` do repositório de fontes do Site. Esta é uma cópia revisada para o GitHub; a implantação existente não foi alterada.
 
 ## Preparar e verificar
 

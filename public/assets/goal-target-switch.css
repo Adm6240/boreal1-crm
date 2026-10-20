@@ -1,0 +1,50 @@
+.goal-target-switch {
+  display: inline-flex;
+  gap: 3px;
+  margin-top: 14px;
+  padding: 4px;
+  border: 1px solid #ffffff38;
+  border-radius: 10px;
+  background: #061b3f70;
+}
+
+.goal-target-switch button {
+  min-width: 102px;
+  border: 0;
+  border-radius: 7px;
+  padding: 8px 14px;
+  background: transparent;
+  color: #c9dcf6;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 850;
+  cursor: pointer;
+  transition: background .2s, color .2s, box-shadow .2s;
+}
+
+.goal-target-switch button:hover {
+  color: #fff;
+  background: #ffffff14;
+}
+
+.goal-target-switch button.active {
+  background: #fff;
+  color: #0b3976;
+  box-shadow: 0 4px 14px #00194340;
+}
+
+.goal-target-switch button:focus-visible {
+  outline: 3px solid #8ec1ff;
+  outline-offset: 2px;
+}
+
+@media (max-width: 700px) {
+  .goal-target-switch {
+    width: 100%;
+  }
+
+  .goal-target-switch button {
+    flex: 1;
+    min-width: 0;
+  }
+}

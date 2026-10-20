@@ -1,5 +1,6 @@
 import {UserError,limitedBody} from './email.mjs';
 import {requireRole} from './users.mjs';
+import {brandFor,categoryFor} from './coverage.mjs';
 
 const statePrefixes={RO:'11',AC:'12',AM:'13',RR:'14',PA:'15',AP:'16',TO:'17',MA:'21',PI:'22',CE:'23',RN:'24',PB:'25',PE:'26',AL:'27',SE:'28',BA:'29',MG:'31',ES:'32',RJ:'33',SP:'35',PR:'41',SC:'42',RS:'43',MS:'50',MT:'51',GO:'52',DF:'53'};
 const norm=value=>String(value??'').trim().normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase('pt-BR').replace(/[^a-z0-9]+/g,' ').trim().replace(/\s+/g,' ');
@@ -16,15 +17,27 @@ export async function marketComplete(request,env,auth){requireRole(auth,'admin')
 export async function marketHistory(env,auth){requireRole(auth,'admin');const rows=await env.DB.prepare('SELECT filename,state,summary,created_at FROM market_import_batches ORDER BY created_at DESC LIMIT 30').all();return {batches:rows.results||[]};}
 
 // Match exact identities only: a shared acronym must never join different companies.
-export function companyProfiles(entries,profiles){
+export function companyProfiles(entries,profiles,purchasingClientIds=new Set()){
  const index=new Map(),acronymCompanies=new Map(),localEntities=new Map();
  for(const row of entries){const acronym=norm(row.acronym),name=norm(row.company);if(acronym){if(!acronymCompanies.has(acronym))acronymCompanies.set(acronym,new Set());acronymCompanies.get(acronym).add(name);}if(norm(row.scope)==='local'){if(!localEntities.has(name))localEntities.set(name,new Set());localEntities.get(name).add(row.state+'|'+norm(row.municipality));}}
  for(const profile of profiles){for(const name of new Set([profile.legalName,profile.tradeName,profile.originName].map(norm).filter(Boolean))){if(!index.has(name))index.set(name,[]);index.get(name).push(profile);}}
  return entries.map(row=>{
   const find=(name,acronym=false)=>{if(acronym&&(acronymCompanies.get(norm(name))?.size||0)>1)return null;let candidates=index.get(norm(name))||[];if(norm(row.scope)==='local')candidates=candidates.filter(profile=>!profile.state||profile.state===row.state);if(norm(row.scope)==='local'&&(localEntities.get(norm(row.company))?.size||0)>1)candidates=candidates.filter(profile=>profile.state===row.state&&norm(profile.delivery?.city)===norm(row.municipality));if(candidates.length>1)candidates=candidates.filter(profile=>profile.state===row.state);return candidates.length===1?candidates[0]:null;};
   const profile=find(row.company)||find(row.acronym,true);
-  return {...row,borealClient:profile?.hasBought==='yes',client:profile?{id:profile.id,name:profile.legalName,hasBought:profile.hasBought||'',equipment:profile.equipment||'',software:profile.software||'',lastSaleDate:profile.lastSaleDate||'',lastSaleDescription:profile.lastSaleDescription||''}:null};
+  return {...row,borealClient:profile?.hasBought==='yes'||purchasingClientIds.has(profile?.id),client:profile?{id:profile.id,name:profile.legalName,hasBought:profile.hasBought||'',equipment:profile.equipment||'',software:profile.software||'',lastSaleDate:profile.lastSaleDate||'',lastSaleDescription:profile.lastSaleDescription||''}:null};
  });
+}
+// The sale description often contains only quantity/model; the separate equipment
+// field supplies the brand. Never convert an unconfirmed equipment inventory into a sale.
+export function registeredSaleEquipment(profile){
+ if(profile.hasBought!=='yes')return [];
+ const description=clean(profile.lastSaleDescription||profile.equipment,1000);
+ if(!description)return [];
+ const saleBrands=['Bixolon','Zebra','Urovo'].filter(brand=>new RegExp(`\\b${brand}\\b`,'i').test(description));
+ const brands=saleBrands.length?saleBrands:['Bixolon','Zebra','Urovo'].filter(brand=>new RegExp(`\\b${brand}\\b`,'i').test(profile.equipment||''));
+ const quantityText=description.match(/^\s*(\d[\d.]*)\b/)?.[1];
+ const quantity=brands.length===1&&quantityText?Number(quantityText.replace(/\D/g,'')):null;
+ return brands.map(brand=>({brand,category:categoryFor({description}),description,quantity,deliveryDate:clean(profile.lastSaleDate,10),orderNumber:'',source:'Venda informada no cadastro'}));
 }
 export async function marketData(env,auth,state){
  requireRole(auth,'admin','coordinator','commercial');const uf=clean(state||'BR',2).toUpperCase();if(uf!=='BR'&&!statePrefixes[uf])throw new UserError('Informe uma UF válida do Brasil.');
@@ -32,5 +45,8 @@ export async function marketData(env,auth,state){
  const statement=env.DB.prepare(query),rows=await (uf==='BR'?statement:statement.bind(uf)).all();
  const saved=(await env.DB.prepare('SELECT id,payload,origin_name FROM client_profiles').all()).results||[];
  const profiles=saved.map(row=>({...JSON.parse(row.payload),id:row.id,originName:row.origin_name}));
- return {state:uf,entries:companyProfiles(rows.results||[],profiles)};
+ const orders=(await env.DB.prepare("SELECT client_id,payload,workflow,status,updated_at FROM client_orders WHERE status IN ('dispatched','completed') ORDER BY updated_at").all()).results||[],equipmentByClient={};
+ for(const row of orders){let order,workflow;try{order=JSON.parse(row.payload);workflow=JSON.parse(row.workflow||'{}');}catch{continue;}const deliveryEvent=[...(workflow.events||[])].reverse().find(event=>['completed','dispatched'].includes(event.status)),deliveryDate=clean(deliveryEvent?.at||workflow.receivedAt||workflow.dispatchAt||row.updated_at,10);for(const item of Array.isArray(order.items)?order.items:[]){if(item.kind!=='equipment'||!Number.isFinite(Number(item.quantity))||Number(item.quantity)<1)continue;const equipment={brand:brandFor(item),category:categoryFor(item),description:clean(item.description||'Item sem descrição',200),quantity:Number(item.quantity),deliveryDate,orderNumber:clean(order.number,80),source:'Pedido despachado/concluído'};const list=equipmentByClient[row.client_id]||(equipmentByClient[row.client_id]=[]),existing=list.find(entry=>norm(entry.brand)===norm(equipment.brand)&&norm(entry.category)===norm(equipment.category)&&norm(entry.description)===norm(equipment.description));if(existing){existing.quantity+=equipment.quantity;if(equipment.deliveryDate>existing.deliveryDate)existing.deliveryDate=equipment.deliveryDate;}else list.push(equipment);}}
+ for(const profile of profiles){if(equipmentByClient[profile.id]?.length)continue;const registered=registeredSaleEquipment(profile);if(registered.length)equipmentByClient[profile.id]=registered;}
+ return {state:uf,entries:companyProfiles(rows.results||[],profiles,new Set(Object.keys(equipmentByClient))),equipmentByClient};
 }

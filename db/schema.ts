@@ -1,8 +1,29 @@
 import { sqliteTable, text, integer, index, uniqueIndex, check } from 'drizzle-orm/sqlite-core';
 import {sql} from 'drizzle-orm';
 
+export const crmResetRuns = sqliteTable('crm_reset_runs', {
+ id:text('id').primaryKey(),status:text('status').notNull(),summary:text('summary').notNull(),actorId:text('actor_id').notNull(),createdAt:text('created_at').notNull(),restoredAt:text('restored_at'),
+});
+export const crmResetRows = sqliteTable('crm_reset_rows', {
+ resetId:text('reset_id').notNull().references(()=>crmResetRuns.id),entity:text('entity').notNull(),rowKey:text('row_key').notNull(),payload:text('payload').notNull(),
+},t=>[uniqueIndex('idx_crm_reset_row').on(t.resetId,t.entity,t.rowKey)]);
+
+export const serialReceipts = sqliteTable('inventory_serial_receipts', {
+ id:text('id').primaryKey(),filename:text('filename').notNull(),date:text('date').notNull(),mode:text('mode').notNull(),payload:text('payload').notNull(),authorId:text('author_id').notNull(),createdAt:text('created_at').notNull(),
+});
+export const serialUnits = sqliteTable('inventory_serial_units', {
+ id:text('id').primaryKey(),itemId:text('item_id').notNull().references(()=>inventoryItems.id),kind:text('kind').notNull(),serial:text('serial').notNull(),serialKey:text('serial_key').notNull(),seal:text('seal'),sealKey:text('seal_key'),
+ parentId:text('parent_id'),originId:text('origin_id'),status:text('status').notNull().default('available'),revision:integer('revision').notNull().default(1),receiptId:text('receipt_id').notNull().references(()=>serialReceipts.id),payload:text('payload').notNull(),orderId:text('order_id').references(()=>clientOrders.id),createdAt:text('created_at').notNull(),
+},t=>[uniqueIndex('idx_serial_identity').on(t.kind,t.serialKey),uniqueIndex('idx_serial_seal').on(t.sealKey),index('idx_serial_item').on(t.itemId,t.status),index('idx_serial_parent').on(t.parentId)]);
+export const serialEvents = sqliteTable('inventory_serial_events', {
+ id:text('id').primaryKey(),unitId:text('unit_id').notNull().references(()=>serialUnits.id),action:text('action').notNull(),expectedRevision:integer('expected_revision'),orderId:text('order_id').references(()=>clientOrders.id),payload:text('payload').notNull(),authorId:text('author_id').notNull(),createdAt:text('created_at').notNull(),
+},t=>[index('idx_serial_event_unit').on(t.unitId,t.createdAt)]);
+export const serialShortages = sqliteTable('inventory_serial_shortages', {
+ id:text('id').primaryKey(),equipmentId:text('equipment_id').notNull().references(()=>serialUnits.id),kind:text('kind').notNull(),activeKey:text('active_key'),removedId:text('removed_id'),replacementId:text('replacement_id'),orderId:text('order_id').references(()=>clientOrders.id),createdAt:text('created_at').notNull(),resolvedAt:text('resolved_at'),
+},t=>[uniqueIndex('idx_serial_shortage_active').on(t.activeKey),index('idx_serial_shortage_equipment').on(t.equipmentId)]);
+
 export const inventoryItems = sqliteTable('inventory_items', {
- id:text('id').primaryKey(),sku:text('sku').notNull(),name:text('name').notNull(),kind:text('kind').notNull(),condition:text('condition').notNull().default('unknown'),
+ id:text('id').primaryKey(),sku:text('sku').notNull(),name:text('name').notNull(),manufacturer:text('manufacturer').notNull().default(''),kind:text('kind').notNull(),condition:text('condition').notNull().default('unknown'),
  balance:integer('balance').notNull().default(0),minimum:integer('minimum').notNull().default(0),createdAt:text('created_at').notNull(),
 },t=>[uniqueIndex('idx_inventory_sku').on(t.sku),check('inventory_nonnegative',sql`${t.balance} >= 0`)]);
 export const inventoryKits = sqliteTable('inventory_kits', {
@@ -88,6 +109,7 @@ export const appUsers = sqliteTable('app_users', {
   name: text('name').notNull(),
   role: text('role').notNull(),
   consultantName: text('consultant_name'),
+  avatarKey: text('avatar_key'),
   authUserId: text('auth_user_id'),
   userCode: text('user_code'),
   passwordHash: text('password_hash'),
@@ -103,6 +125,13 @@ export const goalSettings = sqliteTable('goal_settings', {
   payload: text('payload').notNull(),
   updatedBy: text('updated_by').notNull(),
   updatedAt: text('updated_at').notNull(),
+});
+
+export const activitySettings = sqliteTable('activity_settings', {
+  id: integer('id').primaryKey(),
+  scheduleNext: integer('schedule_next').notNull().default(1),
+  updatedBy: text('updated_by'),
+  updatedAt: text('updated_at'),
 });
 
 export const appSessions = sqliteTable('app_sessions', {

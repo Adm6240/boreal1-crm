@@ -1,0 +1,5 @@
+.activity-settings-option{display:flex;align-items:flex-start;gap:12px;margin-bottom:20px;cursor:pointer}
+.activity-settings-option input{margin-top:3px;accent-color:#1769e0;width:18px;height:18px;flex:none}
+.activity-settings-option b,.activity-settings-option small{display:block}
+.activity-settings-option small{margin-top:6px;color:var(--muted);font-size:12px;line-height:1.5;max-width:580px}
+#activitySettingsStatus{margin-top:12px;color:#176b4a;font-size:12px}

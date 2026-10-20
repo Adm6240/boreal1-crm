@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import worker from '../server/index.mjs';
-import {environment,request} from './helpers.mjs';
+import {environment,request,signature} from './helpers.mjs';
 const initial='Fixture-initial-2026!',personal='Fixture-personal-2026!',reset='Fixture-reset-2026!';
 const post=(path,data,cookie)=>new Request('https://boreal.test'+path,{method:'POST',headers:{'Content-Type':'application/json',...(cookie?{cookie}:{})},body:JSON.stringify(data)});
 const get=(path,cookie)=>new Request('https://boreal.test'+path,{headers:cookie?{cookie}:{}});
@@ -17,6 +17,13 @@ test('Email login forces initial password change; reset and deactivation invalid
  response=await worker.fetch(request('/api/users/'+user.id+'/password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:reset})}),env);assert.equal(response.status,200);assert.equal((await worker.fetch(get('/api/me',session),env)).status,401);assert.equal((await signIn(env,user,personal)).status,401);
  response=await signIn(env,user,reset);assert.equal(response.status,200);const resetSession=cookie(response);assert.equal((await response.json()).user.mustChangePassword,true);
  const update=await worker.fetch(request('/api/users/'+user.id,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({...user,active:false})}),env);assert.equal(update.status,200);assert.equal((await worker.fetch(get('/api/me',resetSession),env)).status,401);assert.equal((await signIn(env,user,reset)).status,401);
+});
+test('Administrator can save, display and remove a consultant photo',async()=>{
+ const env=environment(),user=await create(env),form=new FormData();form.append('avatar',new Blob([signature],{type:'image/png'}),'nicholas.png');
+ let response=await worker.fetch(request(`/api/users/${user.id}/avatar`,{method:'PUT',body:form}),env);assert.equal(response.status,200,await response.clone().text());let data=await response.json();assert.match(data.user.avatarUrl,new RegExp(`/api/users/${user.id}/avatar`));
+ response=await worker.fetch(request(data.user.avatarUrl),env);assert.equal(response.status,200);assert.equal(response.headers.get('content-type'),'image/png');assert.deepEqual(Buffer.from(await response.arrayBuffer()),signature);
+ data=await (await worker.fetch(request('/api/consultants'),env)).json();assert.match(data.avatars.Nicholas,/\/avatar\?v=/);
+ response=await worker.fetch(request(`/api/users/${user.id}/avatar`,{method:'DELETE'}),env);assert.equal(response.status,200);assert.equal((await response.json()).user.avatarUrl,'');assert.equal((await worker.fetch(request(`/api/users/${user.id}/avatar`),env)).status,404);
 });
 test('Commercial can only read own goal, company aggregates and own orders; cannot mutate operations or users',async()=>{
  const env=environment(),user=await create(env),session=await activate(env,user);

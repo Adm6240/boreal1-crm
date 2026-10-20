@@ -12,15 +12,18 @@ const archive=`SELECT l.id,l.item_id,COALESCE(json_extract(l.payload,'$.entry'),
 export async function listInventoryMovements(env,url,validateDate){
  const params=[],where=[];
  const bounded=(v,max=200)=>{if(v.length>max)throw new UserError('Filtro muito longo.');return v.trim();};
- const q=bounded(url.searchParams.get('q')||''),number=bounded(url.searchParams.get('number')||'',80),condition=url.searchParams.get('condition')||'';
+ const q=bounded(url.searchParams.get('q')||''),number=bounded(url.searchParams.get('number')||'',80),condition=url.searchParams.get('condition')||'',itemId=bounded(url.searchParams.get('itemId')||'',200),direction=url.searchParams.get('direction')||'';
  if(condition&&!['new','used','refurbished','unknown'].includes(condition))throw new UserError('Condição de estoque inválida.');
- if(q){where.push('(name LIKE ? OR sku LIKE ? OR context LIKE ? OR contact LIKE ?)');params.push(...Array(4).fill('%'+q+'%'));}
+ if(direction&&!['entry','exit'].includes(direction))throw new UserError('Tipo de movimentação inválido.');
+ if(q){where.push('(name LIKE ? OR sku LIKE ? OR manufacturer LIKE ? OR context LIKE ? OR contact LIKE ?)');params.push(...Array(5).fill('%'+q+'%'));}
  if(number){where.push("lower(trim(CAST(json_extract(context,'$.number') AS TEXT)))=lower(?)");params.push(number);}
+ if(itemId){where.push('item_id=?');params.push(itemId);}
+ if(direction)where.push(direction==='entry'?'delta>0':'delta<0');
  for(const [param,op]of [['from','>='],['to','<=']])if(url.searchParams.get(param)){where.push('date '+op+' ?');params.push(validateDate(url.searchParams.get(param)));}
  if(condition){where.push('itemCondition=?');params.push(condition);}
  const offset=Number(url.searchParams.get('offset')||0);if(!Number.isSafeInteger(offset)||offset<0)throw new UserError('Página inválida.');
  const source=`WITH raw AS (SELECT * FROM inventory_movements UNION ALL ${archive}), enriched AS (
- SELECT m.*,i.name,i.sku,i.kind itemKind,COALESCE(json_extract(c.payload,'$.condition'),i.condition,'unknown') itemCondition,
+ SELECT m.*,i.name,i.sku,i.manufacturer,i.kind itemKind,COALESCE(json_extract(m.context,'$.condition'),json_extract(c.payload,'$.condition'),i.condition,'unknown') itemCondition,
  COALESCE(NULLIF(json_extract(m.context,'$.contact'),''),json_extract(o.payload,'$.snapshot.contact'),'') contact,
  CASE WHEN m.order_id IS NOT NULL THEN json_array('order',m.order_id)
  WHEN m.kind='historical' AND trim(COALESCE(CAST(json_extract(m.context,'$.number') AS TEXT),''))!='' THEN
@@ -28,8 +31,8 @@ export async function listInventoryMovements(env,url,validateDate){
  ELSE json_array('row',m.id) END movementKey
  FROM raw m JOIN inventory_items i ON i.id=m.item_id LEFT JOIN inventory_import_items c ON c.item_id=i.id LEFT JOIN client_orders o ON o.id=m.order_id),
  matched AS (SELECT DISTINCT movementKey FROM enriched ${where.length?'WHERE '+where.join(' AND '):''}),
- eligible AS (SELECT * FROM enriched WHERE movementKey IN (SELECT movementKey FROM matched) ${condition?'AND itemCondition=?':''})`;
- if(condition)params.push(condition);
+ eligible AS (SELECT * FROM enriched WHERE movementKey IN (SELECT movementKey FROM matched) ${condition?'AND itemCondition=?':''} ${itemId?'AND item_id=?':''} ${direction?(direction==='entry'?'AND delta>0':'AND delta<0'):''})`;
+ if(condition)params.push(condition);if(itemId)params.push(itemId);
  const decode=r=>{const {movementKey,viewKey,...rest}=r;return {...rest,context:{...JSON.parse(r.context),contact:r.contact}};};
  if(url.searchParams.get('grouped')!=='1'){
   // Keep the existing per-item API contract for other inventory consumers.

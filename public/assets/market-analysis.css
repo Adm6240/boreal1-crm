@@ -51,7 +51,7 @@
 }
 
 .market-map .states path.market-covered{fill:#2584c5}.market-map .states path.market-boreal{fill:#25996c}.market-map .states path.market-target{fill:#8d5ac7}
-@media(min-width:1101px){#market-analysis .market-filters{grid-template-columns:minmax(170px,.85fr) minmax(170px,.9fr) minmax(190px,1.2fr) minmax(180px,1fr) minmax(200px,1.1fr) auto}}
+@media(min-width:1101px){#market-analysis .market-filters{grid-template-columns:minmax(145px,.75fr) minmax(155px,.8fr) minmax(175px,1.1fr) minmax(170px,1fr) minmax(175px,.95fr) minmax(190px,1.05fr) auto}}
 
 /* Keep the same live filters available while the board is in presentation mode. */
 #marketBoard:fullscreen>.market-filters{flex:0 0 auto;width:auto;margin:0;padding:14px 22px 16px;border-bottom:1px solid #dfe6ef;background:#eef3f8;box-sizing:border-box}
@@ -59,3 +59,8 @@
 #marketBoard:fullscreen .market-board-head{flex:0 0 auto}
 @media(max-width:1100px){#marketBoard:fullscreen>.market-filters{grid-template-columns:repeat(2,minmax(0,1fr));max-height:230px;overflow:auto}}
 @media(max-width:700px){#marketBoard:fullscreen>.market-filters{grid-template-columns:1fr;max-height:310px;padding:12px 16px}}
+.market-legend i.brand-zebra{background:#0b2f5b}.market-legend i.brand-bixolon{background:#f28c28}.market-legend i.brand-urovo{background:#58a9df}
+.market-map path.market-brand-zebra{fill:#0b2f5b!important}.market-map path.market-brand-bixolon{fill:#f28c28!important}.market-map path.market-brand-urovo{fill:#58a9df!important}
+/* A white halo keeps every UF legible on coverage/brand colors and outside the coast. */
+.market-map .state-labels text{font:800 44px Arial,sans-serif;fill:#092554;stroke:#fff;stroke-width:8px;stroke-linejoin:round;paint-order:stroke fill;letter-spacing:1px}
+.market-equipment-list{display:grid;gap:7px;margin:11px 0;padding:10px;border-radius:9px;background:#eef4f9}.market-equipment-item{padding-left:9px;border-left:4px solid #7a8997}.market-equipment-item.brand-zebra{border-color:#0b2f5b}.market-equipment-item.brand-bixolon{border-color:#f28c28}.market-equipment-item.brand-urovo{border-color:#58a9df}.market-equipment-item b,.market-equipment-item span{display:block}.market-equipment-item span{font-size:11px}
