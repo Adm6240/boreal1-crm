@@ -1,0 +1,19 @@
+/* Mantém a identificação do produto visualmente separada da pesquisa. */
+header>.logo-wrap{
+  width:285px;
+  flex:0 0 285px;
+  gap:16px;
+  margin-right:24px;
+}
+header>.logo-wrap span{
+  white-space:nowrap;
+}
+
+@media(max-width:760px){
+  header>.logo-wrap{
+    width:auto;
+    flex:0 0 auto;
+    gap:12px;
+    margin-right:0;
+  }
+}

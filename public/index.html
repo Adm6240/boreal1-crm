@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Boreal Workstation</title>
+  <meta name="description" content="CRM comercial da Boreal Technologies">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect rx='14' width='64' height='64' fill='%230d2b62'/%3E%3Cpath d='M17 14h23a11 11 0 010 22H28v14H17V14zm11 9v5h11a2.5 2.5 0 000-5H28z' fill='white'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="assets/imports.css?v=48"><link rel="stylesheet" href="assets/app.css"><link rel="stylesheet" href="assets/dashboard.css"><link rel="stylesheet" href="assets/goals-dashboard.css?v=23"><link rel="stylesheet" href="assets/settings.css?v=10"><link rel="stylesheet" href="assets/activities.css?v=64"><link rel="stylesheet" href="assets/geo-dashboard.css"><link rel="stylesheet" href="assets/vector-map.css"><link rel="stylesheet" href="assets/vector-regions.css"><link rel="stylesheet" href="assets/state-maps.css?v=6"><link rel="stylesheet" href="assets/pipeline.css?v=7"><link rel="stylesheet" href="assets/order-areas.css?v=24">
+<link rel="stylesheet" href="assets/client-history.css?v=13"><link rel="stylesheet" href="assets/client-orders.css?v=27"><link rel="stylesheet" href="assets/clients.css?v=15"><link rel="stylesheet" href="assets/order-workflow.css?v=27"><link rel="stylesheet" href="assets/postal-code.css?v=31"><link rel="stylesheet" href="assets/coverage.css?v=32">
+<link rel="stylesheet" href="assets/auth.css?v=35"><link rel="stylesheet" href="assets/header-layout.css?v=36"><link rel="stylesheet" href="assets/market-analysis.css?v=52"><link rel="stylesheet" href="assets/maintenance.css"><link rel="stylesheet" href="assets/sidebar-menu.css"><link rel="stylesheet" href="assets/inventory.css"></head>
+<body data-role="" data-auth="locked">
+<div id="authGate" role="region" aria-label="Acesso ao Boreal"><div class="auth-gate-card">
+<img src="assets/boreal-logo.png" alt="Boreal Technologies" width="170" onerror="this.hidden=true">
+<h1 id="authTitle">Entrar no Boreal</h1><p id="authMessage" role="status">Verificando seu acesso…</p>
+<form id="loginForm" hidden><label>E-mail ou ID<input type="text" name="email" required autocomplete="username"></label><label>Senha<input type="password" name="password" required autocomplete="current-password" maxlength="72"></label><button class="primary" type="submit">Entrar</button><button type="button" class="secondary" id="forgotPassword">Esqueci minha senha</button></form>
+<form id="initialPasswordForm" hidden><label id="initialCurrentLabel">Senha inicial / atual<input type="password" name="currentPassword" autocomplete="current-password"></label><label>Nova senha pessoal<input type="password" name="password" required minlength="11" maxlength="72" autocomplete="new-password"></label><label>Confirme a nova senha<input type="password" name="confirm" required minlength="11" maxlength="72" autocomplete="new-password"></label><button class="primary" type="submit">Salvar senha e entrar</button><button type="button" class="secondary auth-logout">Sair</button></form>
+</div></div>
+
+<aside class="sidebar" id="borealSidebar">
+  <div class="sidebar-brand"><div class="brandmark" role="img" aria-label="Boreal Technologies"></div><img class="sidebar-full-logo" src="assets/boreal-logo.png" alt="Boreal Technologies"></div>
+  <nav class="sidebar-nav" aria-label="Navegação principal"><p class="sidebar-category">CRM</p>
+    <button class="nav active" data-view="overview" title="Visão geral">⌂<span>Visão geral</span></button>
+    <button class="nav" data-view="market-analysis" title="Análise de Mercado">⌖<span>Análise de Mercado</span></button>
+    <button class="nav" data-view="pipeline" title="Oportunidades">◫<span>Oportunidades</span></button>
+    <button class="nav" data-view="clients" title="Clientes">♙<span>Clientes</span></button>
+    <button class="nav" data-view="activities" title="Atividades">✓<span>Atividades</span><b class="badge" id="activityBadge">5</b></button>
+    <div class="sidebar-divider" role="separator" aria-label="Gerenciamento de pedidos"><span>Gerenciamento de pedidos</span></div>
+    <button class="nav" type="button" data-view="stock" title="Estoque" aria-label="Estoque"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 7 9-4 9 4-9 4-9-4Zm0 0v10l9 4 9-4V7M12 11v10"/></svg><span>Estoque</span></button>
+    <button class="nav" type="button" data-view="maintenance" aria-expanded="false" aria-controls="maintenanceSubsections" title="Manutenção" aria-label="Manutenção"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 5a6 6 0 0 1-7.5 7.5l-7.8 7.8a2 2 0 0 1-2.8-2.8l7.8-7.8A6 6 0 0 1 18.5 2L15 5.5 18.5 9 21 5Z"/></svg><span>Manutenção</span><i class="sidebar-subsection-arrow" aria-hidden="true">⌄</i></button>
+    <div class="sidebar-subsections" data-sector="maintenance" id="maintenanceSubsections" data-subsections-open="false" role="group" aria-label="Subseções de Manutenção"><button type="button" data-operation-jump="maintenance">Gerenciamento de Pedido</button><button type="button" data-operation-jump="maintenance-aftersales">Pós-venda</button></div>
+    <button class="nav" type="button" data-view="accounting" title="Contábil" aria-label="Contábil"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2h9l4 4v16H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Zm9 0v5h4M8 12h8M8 16h8M8 20h5"/></svg><span>Contábil</span></button>
+    <button class="nav" type="button" data-view="dispatch" aria-expanded="false" aria-controls="dispatchSubsections" title="Expedição" aria-label="Expedição"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 7h12v12H2V7Zm12 4h4l4 4v4h-8v-8ZM6 19a2 2 0 1 0 4 0m7 0a2 2 0 1 0 4 0M5 10h6"/></svg><span>Expedição</span><i class="sidebar-subsection-arrow" aria-hidden="true">⌄</i></button>
+    <div class="sidebar-subsections" data-sector="dispatch" id="dispatchSubsections" data-subsections-open="false" role="group" aria-label="Subseções de Expedição"><button type="button" data-operation-jump="dispatch">Gerenciamento de Pedido</button><button type="button" data-operation-jump="dispatch-aftersales">Pós-venda</button></div>
+  </nav>
+<div class="sidebar-footer">  <button class="nav bottom" data-view="settings" title="Configurações">⚙<span>Configurações</span></button><p class="sidebar-version" aria-label="Versão ativa 88"><i></i><span class="version-full">Versão ativa · 88</span><span class="version-short">v88</span></p><button type="button" id="sidebarToggle" aria-expanded="false" aria-controls="borealSidebar" title="Expandir menu"><b aria-hidden="true">»</b><span>Expandir</span></button></div>
+</aside><button type="button" id="sidebarScrim" aria-label="Recolher menu" hidden></button>
+<main>
+  <header>
+    <div class="logo-wrap"><img src="assets/boreal-logo.png?v=31" alt="Boreal Technologies"><span>WORKSTATION</span></div>
+    <label class="search"><span>⌕</span><input id="globalSearch" placeholder="Pesquisar clientes, contatos e projetos"></label>
+    <div class="header-actions"><button class="icon-btn" aria-label="Notificações">♢<i></i></button><div class="avatar">DF</div><div><strong>Danielle</strong><small>Administradora</small></div><button type="button" class="secondary auth-logout" id="headerLogout">Sair</button></div>
+  </header>
+
+  <section id="overview" class="view active">
+    <div class="title-row"><div><p class="eyebrow">INTELIGÊNCIA COMERCIAL</p><h1>Visão geral</h1><p class="muted">Filtre e analise a atuação comercial da Boreal.</p></div><div class="updated">Dados atualizados hoje, 08:42</div></div>
+    <div class="filters">
+      <label>Classificação<select id="segmentFilter"><option>Todos</option><option>Concessionária</option><option>Indústria</option><option>Varejo</option><option>Empreiteiro</option></select></label>
+      <label>Consultor<select id="ownerFilter"><option>Todos os consultores</option><option>CONSULTOR DESATIVADO</option><option>Danielle</option></select></label>
+      <label>Período<select id="periodFilter"><option>Este trimestre</option><option>Este mês</option><option>Este ano</option></select></label>
+      <label>Marca<select id="brandFilter"><option>Todas</option><option>Bixolon</option><option>Zebra</option></select></label>
+      <label>Equipamento<select id="equipmentFilter"><option>Todos</option><option>Impressora móvel</option><option>Impressora de mesa</option><option>Coletor de dados</option></select></label>
+      <label>Estado<select id="stateFilter"><option>Todos</option></select></label>
+      <button class="filter-btn" id="clearFilters">Limpar filtros</button>
+    </div>
+    <div class="kpis">
+      <article><div class="kpi-icon blue">◎</div><div><span>Equipamentos despachados</span><strong id="kpiClients">—</strong><small id="kpiStates">Carregando cobertura…</small></div></article>
+      <article><div class="kpi-icon violet">◫</div><div><span>Oportunidades abertas</span><strong id="kpiOpen">37</strong><small id="kpiOpenValue">R$ 1.842.500</small></div></article>
+      <article><div class="kpi-icon amber">◇</div><div><span>Projetos aprovados</span><strong id="kpiApproved">12</strong><small id="kpiApprovedValue">R$ 684.900</small></div></article>
+      <article><div class="kpi-icon green">✓</div><div><span>Negócios concluídos</span><strong id="kpiWon">18</strong><small id="kpiWonValue">R$ 812.000</small></div></article>
+      <article><div class="kpi-icon red">×</div><div><span>Negócios perdidos</span><strong id="kpiLost">6</strong><small id="kpiLostValue">R$ 142.300</small></div></article>
+    </div>
+    <article class="panel goals-panel" aria-labelledby="goalsTitle">
+      <div class="panel-head goals-head">
+        <div><p class="eyebrow">METAS COMERCIAIS</p><h2 id="goalsTitle">Desempenho da equipe em 2026</h2><p>Supermeta anual, ritmo acumulado e resultado por vendedor</p></div>
+        <div class="goals-period"><span id="goalsPeriodLabel">Acompanhamento mensal</span><b id="goalUpdatedAt">Referência: setembro de 2026</b><small id="goalDataStatus" role="status" aria-live="polite">Carregando pedidos gerados…</small><button type="button" id="retryGoalActuals" class="filter-btn" hidden>Atualizar valores</button></div>
+      </div>
+      <div class="goals-overview">
+        <section class="annual-score" aria-label="Supermeta anual">
+          <div class="goal-ring" id="goalRing"><div><strong id="goalPercent">0%</strong><span>da supermeta anual</span></div></div>
+          <div class="annual-copy">
+            <span class="goal-kicker" id="goalAnnualLabel">SUPERMETA ANUAL · 130%</span>
+            <h3 id="goalAnnual">R$ 0</h3>
+            <p><strong id="goalRealized">R$ 0</strong> realizados até <span id="goalActualThrough">setembro</span></p>
+            <div class="annual-metrics">
+              <div><span>Falta para a supermeta</span><b id="goalRemaining">R$ 0</b></div>
+              <div><span>Projeção de fechamento</span><b id="goalProjection">R$ 0</b></div>
+            </div>
+            <div class="pace-status" id="goalPaceStatus"></div>
+          </div>
+        </section>
+        <section class="period-score" aria-label="Acompanhamento da supermeta mensal">
+          <span class="goal-kicker">ACOMPANHAMENTO MENSAL</span>
+          <div class="period-value"><strong id="periodRealized">R$ 0</strong><span id="periodPercent">0%</span></div>
+          <p id="periodTarget">Meta mensal (130% da anual ÷ 12): R$ 0</p>
+          <div class="period-track"><i id="periodBar"></i><em id="periodMarker"></em></div>
+          <small id="periodHint">Resultado do mês em relação à supermeta mensal.</small>
+        </section>
+      </div>
+      <section class="bonus-ladder" aria-label="Faixas de bonificação anual">
+        <div class="bonus-copy"><span class="goal-kicker">BONIFICAÇÃO DA EMPRESA</span><h3 id="bonusStatus">Meta ainda não atingida</h3><p id="bonusStatusDetail">Acompanhe a evolução até as faixas de premiação.</p></div>
+        <div class="bonus-scale"><div class="bonus-line"><i id="bonusProgress"></i><span class="bonus-marker general" id="generalMarker"><b>100%</b><small>1 salário</small></span><span class="bonus-marker super" id="superMarker"><b>130%</b><small>2 salários</small></span></div></div>
+        <div class="bonus-values"><div><span>Meta geral</span><b id="bonusGeneralValue">R$ 0</b><small id="bonusGeneralRule">100% do salário-base</small></div><div><span>Supermeta</span><b id="bonusSuperValue">R$ 0</b><small id="bonusSuperRule">200% do salário-base</small></div></div>
+      </section>
+      <div class="goals-detail">
+        <section class="seller-section">
+          <div class="goals-subhead"><div><h3>Meta por vendedor</h3><p id="sellerContext">Acumulado do ano</p></div><span id="sellerCount">2 vendedores</span></div>
+          <div class="seller-grid" id="sellerGoals"></div>
+        </section>
+        <section class="monthly-section">
+          <div class="goals-subhead"><div><h3>Evolução mensal</h3><p>Realizado x supermeta mensal</p></div><div class="chart-legend"><span><i></i>Realizado</span><span><i></i>Meta 130%</span></div></div>
+          <div class="monthly-chart" id="monthlyGoals" aria-label="Gráfico de evolução mensal das vendas"></div>
+        </section>
+      </div>
+    </article>
+    <div class="dashboard-grid">
+      <article class="panel funnel"><div class="panel-head"><div><h2>Movimentação dos clientes</h2><p>Distribuição por etapa comercial</p></div></div>
+        <div class="stage-row" id="dashboardStages"></div>
+      </article>
+      <article class="panel territory"><div class="panel-head"><div><h2 id="mapTitle">Cobertura nacional por equipamento</h2><p id="mapSubtitle">Selecione uma marca e clique em um estado para analisar os municípios</p></div><div class="map-actions"><button id="backToBrazil" class="filter-btn" hidden>← Voltar ao Brasil</button><div class="legend"><i></i> Maior presença <i></i> Sem vendas</div></div></div><div class="territory-body election-layout"><div class="brazil-map election-map" id="brazilMap" aria-label="Mapa interativo de cobertura comercial"></div><aside id="stateDetail"><div class="empty-state"><b>Selecione um estado</b><span>O painel mostrará municípios, equipamentos e oportunidades.</span></div></aside></div></article>
+      <article class="panel won"><div class="panel-head"><div><h2>Projetos aprovados</h2><p>Valor contabilizado somente após aprovação</p></div></div>
+        <table><thead><tr><th>Cliente / Projeto</th><th>Estado</th><th>Segmento</th><th>Valor</th></tr></thead><tbody id="approvedRows"></tbody></table>
+      </article>
+    </div>
+  </section>
+
+  <section id="market-analysis" class="view">
+    <div class="title-row market-title-row"><div><p class="eyebrow">INTELIGÊNCIA TERRITORIAL</p><h1>Análise de Mercado</h1><p class="muted">Mapeie as companhias que atuam nos municípios de todo o Brasil.</p></div><button type="button" class="primary" id="marketPresentation">▣ Modo apresentação</button></div>
+    <div class="market-filters">
+      <label>Estado<select id="marketState"><option value="BR">Brasil · todos os estados</option></select></label>
+      <label>Setor<select id="marketSector"><option value="">Todos os setores</option><option value="water">Água e saneamento</option><option value="energy">Energia elétrica</option></select></label>
+      <label>Companhia<select id="marketCompany"><option value="">Todas as companhias</option></select></label>
+      <label>Cobertura Boreal<select id="marketBorealClient"><option value="">Todos</option><option value="yes">Sim · localidade atendida</option><option value="no">Não · alvos de atuação</option></select></label>
+      <label>Buscar município<input id="marketMunicipality" list="marketMunicipalities" placeholder="Ex.: Belo Horizonte"></label><datalist id="marketMunicipalities"></datalist>
+      <button type="button" class="filter-btn" id="marketClear">Limpar filtros</button>
+    </div>
+    <div class="market-kpis">
+      <article><span>Companhias mapeadas</span><strong id="marketCompanyCount">0</strong><small>empresas na base</small></article>
+      <article><span>Municípios com atuação</span><strong id="marketCoveredCount">0</strong><small id="marketTotalLabel">localidades na malha territorial</small></article>
+      <article><span>Municípios disponíveis</span><strong id="marketOpenCount">0</strong><small>fora da cobertura filtrada</small></article>
+      <article class="multiple"><span>Atuação compartilhada</span><strong id="marketMultipleCount">0</strong><small>municípios com 2 ou mais companhias</small></article>
+    </div>
+    <article class="market-board panel" id="marketBoard">
+      <header class="market-board-head"><div><p class="eyebrow">COBERTURA POR MUNICÍPIO</p><h2 id="marketMapTitle">Brasil</h2><p id="marketMapSubtitle">Selecione um estado para abrir sua malha municipal.</p></div><div class="market-board-actions"><div class="market-legend"><span data-market-legend="all"><i class="covered"></i>Com atuação</span><span data-market-legend="all"><i class="multiple"></i>Mais de uma companhia</span><span data-market-legend="yes" hidden><i class="boreal"></i>Cliente Boreal</span><span data-market-legend="no" hidden><i class="target"></i>Localidade sem cliente Boreal</span><span><i class="empty"></i>Fora do filtro</span></div><button type="button" class="secondary" id="marketBackBrazil" hidden>← Brasil</button><button type="button" class="secondary" id="marketExitPresentation" hidden>× Sair da apresentação</button></div></header>
+      <div class="market-board-body"><div class="market-map-wrap"><div id="marketMap" class="market-map" role="img" aria-label="Mapa de atuação das companhias"></div><p class="market-source">Malha territorial: IBGE · dados empresariais importados pela Boreal</p></div><aside id="marketDetail" class="market-detail" aria-live="polite"></aside></div>
+    </article>
+  </section>
+
+  <section id="pipeline" class="view">
+    <div class="title-row"><div><p class="eyebrow">OPORTUNIDADES</p><h1>Funil comercial</h1><p class="muted">Mova as oportunidades conforme a negociação avança.</p></div><button class="primary" data-open="deal">＋ Nova oportunidade</button></div>
+    <div class="filters compact"><label>Classificação<select id="pipelineSegmentFilter"><option>Todos</option><option>Concessionária</option><option>Indústria</option><option>Varejo</option><option>Empreiteiro</option></select></label><label>Responsável<select id="pipelineOwnerFilter"><option>Todos</option><option>CONSULTOR DESATIVADO</option><option>Danielle</option></select></label><button class="filter-btn" id="pipelineApplyFilters">☷ Filtrar</button><span class="total" id="pipelineTotal" aria-live="polite"></span></div>
+    <div class="kanban" id="kanban"></div>
+  </section>
+
+  <section id="clients" class="view">
+    <div class="title-row"><div><p class="eyebrow">CADASTRO</p><h1>Clientes</h1><p class="muted">Cadastre e atualize os dados fiscais, contatos, equipamentos e compras.</p></div><button class="primary" type="button" id="newClientBtn">＋ Novo cliente</button></div>
+    <div class="panel client-panel"><div class="table-tools"><label class="search small"><span>⌕</span><input id="clientSearch" placeholder="Buscar cliente, CNPJ ou software"></label><span id="clientCount">0 clientes</span></div><p id="clientListStatus" class="client-list-status" role="status" aria-live="polite" hidden></p>
+      <div class="client-table-scroll"><table class="client-table"><thead><tr><th>Cliente / razão social</th><th>CNPJ</th><th>UF</th><th>Contato comercial</th><th>Equipamento em uso</th><th>Classificação</th><th>Última venda</th><th></th></tr></thead><tbody id="clientRows"></tbody></table></div>
+    </div>
+  </section>
+
+  <section id="activities" class="view">
+    <div class="title-row activity-title"><div><p class="eyebrow">ACOMPANHAMENTO COMERCIAL</p><h1>Atividades</h1><p class="muted">Follow-ups, contatos e próximos passos com cada cliente.</p></div><div class="activity-summary"><strong id="activityOpenCount">0</strong><span>atividades abertas</span></div></div>
+    <div class="activity-workspace panel">
+      <div class="activity-toolbar">
+        <div class="activity-toolbar-left"><div class="view-switch"><button class="active" type="button" data-activity-view="list" aria-label="Visualização em lista" aria-pressed="true">☷</button><button type="button" data-activity-view="calendar" aria-label="Visualização em calendário" aria-pressed="false">▣</button></div><button class="activity-add" id="newActivityBtn">＋ Atividade <span>⌄</span></button><button class="secondary activity-meeting">▣ Agendador de reuniões</button></div>
+        <div class="activity-toolbar-right"><span id="activityResultCount">0 atividades</span><label class="activity-owner-filter">Responsável<select id="activityOwnerFilter"><option>Todos os responsáveis</option></select></label></div>
+      </div>
+      <div class="activity-filters">
+        <div class="activity-type-filters" id="activityTypeFilters"><button class="active" data-activity-type="Todos">Tudo</button><button data-activity-type="Chamada">☎ Chamada</button><button data-activity-type="Reunião">♟ Reunião</button><button data-activity-type="Tarefa">◷ Tarefa</button><button data-activity-type="Proposta">◇ Proposta</button><button data-activity-type="E-mail">✉ E-mail</button></div>
+        <div class="activity-date-filters" id="activityDateFilters"><button class="active" data-activity-date="Para fazer">Para fazer</button><button data-activity-date="Vencido">Vencido <b id="overdueCount">0</b></button><button data-activity-date="Hoje">Hoje</button><button data-activity-date="Amanhã">Amanhã</button><button data-activity-date="Esta semana">Esta semana</button><button data-activity-date="Próxima semana">Próxima semana</button><button data-activity-date="Concluído">Concluídas</button></div>
+      </div>
+      <div class="activity-table-wrap" id="activityListView">
+        <div class="activity-table-head"><span>Concluído</span><span>Assunto</span><span>Negócio / Cliente</span><span>Prioridade</span><span>Pessoa de contato</span><span>E-mail</span><span>Telefone</span><span>Organização</span><span>Responsável</span><span>Data</span></div>
+        <div id="taskRows" class="activity-table-body"></div>
+      </div>
+      <div class="activity-calendar-view" id="activityCalendarView" hidden>
+        <div class="activity-calendar-toolbar"><div><p class="eyebrow">AGENDA SEMANAL</p><h3 id="activityCalendarRange">Semana atual</h3></div><div class="activity-calendar-nav"><button type="button" data-calendar-nav="-1" aria-label="Semana anterior">‹</button><button type="button" data-calendar-today>Hoje</button><button type="button" data-calendar-nav="1" aria-label="Próxima semana">›</button></div></div>
+        <div class="activity-calendar-grid" id="activityCalendarGrid"></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="stock" class="view order-area">
+    <div class="title-row"><div><p class="eyebrow">GERENCIAMENTO DE PEDIDOS</p><h1>Estoque</h1></div></div>
+    <div id="inventoryApp"></div><div id="stockOrdersPanel"><p class="flow-status" id="stockStatus" role="status" aria-live="polite"></p><div class="kanban order-board" id="stockBoard"></div></div>
+  </section>
+
+  <section id="maintenance" class="view order-area">
+    <div class="title-row"><div><p class="eyebrow">GERENCIAMENTO DE PEDIDOS</p><h1>Manutenção</h1><p>Configuração de pedidos novos</p></div></div>
+    <p class="flow-status" id="maintenanceStatus" role="status" aria-live="polite"></p><div class="kanban order-board maintenance-board" id="maintenanceBoard"></div>
+  </section>
+
+  <section id="accounting" class="view order-area">
+    <div class="title-row"><div><p class="eyebrow">GERENCIAMENTO DE PEDIDOS</p><h1>Contábil</h1></div></div>
+    <div class="panel order-area-start"><h2>Área Contábil</h2><p>As ações contábeis serão definidas na próxima etapa do fluxo de pedidos.</p></div>
+  </section>
+
+  <section id="dispatch" class="view order-area">
+    <div class="title-row"><div><p class="eyebrow">GERENCIAMENTO DE PEDIDOS</p><h1>Expedição</h1></div></div>
+    <p class="flow-status" id="dispatchStatus" role="status" aria-live="polite"></p><div class="kanban order-board dispatch-board" id="dispatchBoard"></div>
+  </section>
+
+  <section id="maintenance-aftersales" class="view"><div class="title-row"><div><p class="eyebrow">MANUTENÇÃO</p><h1>Pós-venda</h1></div></div><div id="maintenanceAftersalesSection"></div></section>
+  <section id="dispatch-aftersales" class="view"><div class="title-row"><div><p class="eyebrow">EXPEDIÇÃO</p><h1>Pós-venda</h1></div></div><div id="dispatchAftersalesSection"></div></section>
+  <section id="settings" class="view">
+    <div class="title-row"><div><p class="eyebrow">ADMINISTRAÇÃO</p><h1>Configurações</h1><p class="muted">Gerencie a conta, os acessos e as regras comerciais.</p></div><div class="role-chip">Acesso: Administradora</div></div>
+    <div class="settings-layout panel">
+      <nav class="settings-tabs" aria-label="Configurações da conta"><button type="button" data-settings-tab="imports" hidden><span>⇧</span><div><b>Importação</b><small>Excel e CSV</small></div></button>
+        <button type="button" data-settings-tab="account"><span>◎</span><div><b>Conta</b><small>Empresa e perfil</small></div></button>
+        <button type="button" data-settings-tab="users"><span>♙</span><div><b>Usuários</b><small>Perfis e permissões</small></div></button>
+        <button type="button" class="active" data-settings-tab="goals"><span>◇</span><div><b>Metas</b><small>Objetivos e bônus</small></div></button>
+      </nav>
+      <div class="settings-content">
+        <section class="settings-pane" data-settings-pane="imports">
+<div class="settings-section-head"><div><h2>Importação de dados</h2><p>Selecione o tipo de dados que deseja importar.</p></div><span class="access-badge">Somente administrador</span></div>
+<p id="importDenied" hidden>Apenas administradores podem importar dados.</p>
+<div id="importControls" hidden><div class="settings-card"><label>Modo de importação<select id="importMode"><option value="pipedrive">Dados do Pipedrive</option><option value="companies">Dados de companhias</option><option value="sales-history">Vendas anteriores · homologação</option></select></label></div><div id="pipedriveImportPanel"><div class="settings-card"><h3>1. Selecionar arquivo</h3><p>Use a base preparada para o Boreal, com as colunas originais e “SIM” em importar. Excel lê todas as abas; CSV importa um tipo por vez. Importe clientes antes dos demais arquivos.</p><label>Arquivo Excel (.xlsx) ou CSV<input id="importFile" type="file" accept=".xlsx,.csv"></label><label>Tipo de registro para CSV<select id="importCsvKind"><option>Clientes</option><option>Contatos</option><option>Negócios</option><option>Atividades</option></select></label><p>Linhas marcadas REVISAR ou NÃO serão ignoradas. Negócios sem valor permanecem com R$ 0,00; esta base não importa valores de vendas.</p></div>
+<div class="settings-card"><h3>2. Conferir consultores</h3><div id="importMappings" class="import-mappings"></div></div>
+<div class="settings-card"><h3>3. Revisar e importar</h3><button id="importPreview" class="secondary" type="button">Gerar prévia</button> <button id="importApply" class="primary" type="button" disabled>Confirmar importação dos registros válidos</button><p id="importStatus" role="status">Selecione o arquivo para começar.</p><div id="importResults"></div></div>
+<div class="settings-card"><h3>Histórico de importações</h3><p>Arquivos grandes são gravados em lotes de até 100 registros.</p><div id="importHistory"></div></div>
+</div><div id="companyImportPanel" hidden><div class="market-import-divider"><p class="eyebrow">ANÁLISE DE MERCADO</p><h2>Dados de concessionárias e companhias · Brasil</h2><p>Importe operações de água, saneamento ou energia dos 26 estados e do Distrito Federal. Registros já cadastrados serão atualizados sem duplicidade.</p></div>
+<div class="settings-card market-import-card"><div><h3>1. Preparar a base territorial</h3><p>Aceita a base sem cabeçalhos com 7 colunas, nesta ordem: região, município, UF, natureza jurídica, abrangência, nome da companhia e sigla. Também aceita planilhas com cabeçalhos estado, municipio, companhia e setor.</p></div><button id="marketTemplate" class="secondary" type="button">Baixar modelo CSV</button><label>Setor dos registros<select id="marketImportSector"><option value="Saneamento">Água e saneamento</option><option value="Energia elétrica">Energia elétrica</option></select></label><label>Arquivo Excel (.xlsx) ou CSV · até 50 MB<input id="marketImportFile" type="file" accept=".xlsx,.csv"></label></div>
+<div class="settings-card"><h3>2. Validar e importar</h3><button id="marketImportPreview" class="secondary" type="button">Gerar prévia do mapa</button> <button id="marketImportApply" class="primary" type="button" disabled>Confirmar importação</button><p id="marketImportStatus" role="status">Selecione o arquivo de atuação municipal.</p><div id="marketImportResults"></div></div>
+<div class="settings-card"><h3>Histórico da análise de mercado</h3><div id="marketImportHistory"></div></div></div><div id="salesHistoryPanel" hidden><div class="settings-card"><h2>Homologação de vendas anteriores</h2><p>Importe os totais mensais já vendidos por vendedor. Os meses em branco ficam para os pedidos gerados no sistema. Nos meses homologados, o valor importado será o total oficial, sem somar pedidos que já estejam incluídos nele. Reimportar substitui o mesmo vendedor e mês.</p><label>Planilha de metas e vendas (.xlsx)<input type="file" id="salesHistoryFile" accept=".xlsx"></label><label>Ano das vendas<input type="number" id="salesHistoryYear" value="2026" min="2020" max="2100"></label></div><div class="settings-card"><h3>Vincular vendedores</h3><div id="salesHistoryMappings" class="import-mappings"></div></div><div class="settings-card"><h3>Conferir e homologar</h3><button id="salesHistoryPreview" type="button" class="secondary">Gerar prévia das vendas</button> <button id="salesHistoryApply" type="button" class="primary" disabled>Confirmar homologação</button><p id="salesHistoryStatus" role="status">Selecione a planilha para começar.</p><div id="salesHistoryResults"></div></div><div class="settings-card"><h3>Vendas anteriores homologadas</h3><div id="salesHistorySaved"></div></div></div></div></section>
+<section class="settings-pane" data-settings-pane="account">
+          <div class="settings-section-head"><div><p class="eyebrow">CADASTRO DA CONTA</p><h2>Boreal Technologies</h2><p>Informações principais da empresa e do usuário conectado.</p></div></div>
+          <div class="account-summary"><div><span>Empresa</span><b>Boreal Technologies</b></div><div><span>Usuária conectada</span><b id="connectedUserName">—</b></div><div><span>Perfil</span><b id="connectedUserRole">—</b></div><div><span>Fuso horário</span><b>Brasília (GMT-3)</b></div></div>
+          <p id="connectedUserEmail"></p><button type="button" class="secondary auth-logout">Sair da conta</button>
+          <form id="changePasswordForm" class="user-form"><h3 class="wide">Alterar minha senha</h3><label>Senha atual<input name="currentPassword" type="password" required autocomplete="current-password"></label><label>Nova senha<input name="password" type="password" minlength="11" maxlength="72" required autocomplete="new-password"></label><button class="primary">Alterar senha</button><p class="wide" role="status"></p></form>
+        </section>
+        <section class="settings-pane" data-settings-pane="users">
+<div class="settings-section-head"><div><p class="eyebrow">CONTROLE DE ACESSO</p><h2>Gerenciar usuários</h2><p>Defina o perfil e os dados de acesso de cada pessoa.</p></div><button type="button" class="primary" id="addUser">Adicionar usuário</button></div>
+<p id="usersStatus" role="status"></p><div class="users-list" id="usersList"></div>
+<form id="userForm" class="user-form" hidden><h3 class="wide" id="userFormTitle">Adicionar usuário</h3><input name="id" type="hidden"><label>Nome<input name="name" required maxlength="160"></label><label>E-mail de login<input name="email" type="email" required maxlength="254" autocomplete="off"></label><label>ID do usuário<input name="userCode" maxlength="60" placeholder="Gerado automaticamente se vazio"></label><label>Perfil<select name="role"><option value="commercial">Consultor</option><option value="admin">Administrador</option><option value="coordinator">Coordenação comercial</option><option value="stock">Estoque</option><option value="maintenance">Manutenção</option><option value="dispatch">Expedição</option><option value="accounting">Contábil</option></select></label><label>Consultor nas metas e pedidos<input name="consultantName" maxlength="160" list="userConsultants" placeholder="Ex.: Nicholas"></label><datalist id="userConsultants"></datalist><label>Status<select name="active"><option value="true">Ativo</option><option value="false">Desativado</option></select></label><label class="wide" id="userPasswordLabel">Senha temporária individual<input name="password" type="password" minlength="11" maxlength="72" autocomplete="new-password"></label><p class="wide">No primeiro acesso, o usuário deve criar uma senha pessoal diferente da senha temporária. Desativar preserva o histórico e bloqueia o login.</p><div class="wide"><button class="primary" type="submit">Salvar usuário</button> <button class="secondary" type="button" id="cancelUser">Cancelar</button></div><p id="userFormStatus" class="wide" role="status"></p></form>
+<form id="resetUserPasswordForm" class="user-form" hidden><h3 class="wide">Redefinir senha: <span id="resetUserName"></span></h3><input name="id" type="hidden"><label class="wide">Nova senha temporária individual<input name="password" type="password" minlength="11" maxlength="72" autocomplete="new-password"></label><button class="primary">Redefinir senha</button><button class="secondary" type="button" id="cancelReset">Cancelar</button><p class="wide" role="status"></p></form>
+<details><summary>Senha inicial padrão</summary><p id="defaultPasswordStatus">Nenhuma senha padrão configurada.</p><form id="defaultPasswordForm" class="user-form"><label class="wide">Definir nova senha padrão<input name="password" type="password" required minlength="11" maxlength="72" autocomplete="new-password"></label><button class="secondary">Salvar senha padrão</button><p class="wide" role="status"></p></form><p>Aplicada somente a novos cadastros ou redefinições. Não altera as senhas pessoais existentes.</p></details>
+<div class="permission-note"><b>Permissões por perfil</b><span>Consultor: CRM e consulta dos pedidos · Operacional: ações no próprio setor · Administrador: usuários, metas e todos os setores.</span></div>
+        </section>
+        <section class="settings-pane active" data-settings-pane="goals">
+          <div class="settings-section-head"><div><p class="eyebrow">PLANEJAMENTO COMERCIAL</p><h2>Metas e bonificação</h2><p>Defina os objetivos anuais da empresa e de cada consultor.</p></div><span class="access-badge">🔒 Administrador e Coordenador comercial</span></div>
+          <form id="goalsSettingsForm">
+            <div class="settings-card">
+              <div class="card-title"><div><h3>Meta geral do ano</h3><p>Objetivo que determina a primeira faixa de bonificação da empresa.</p></div><label>Ano<select id="settingsGoalYear"><option value="2026">2026</option></select></label></div>
+              <div class="goal-form-grid">
+                <label>Meta geral anual (R$)<input id="settingsGeneralGoal" type="number" min="1" step="1" required></label>
+                <label>Percentual da supermeta<input id="settingsSuperPercent" type="number" min="101" max="300" step="1" required><span>% da meta geral</span></label>
+                <label>Bônus ao atingir a meta<input id="settingsGeneralBonus" type="number" min="0" max="1000" step="10" required><span>% do salário-base</span></label>
+                <label>Bônus ao atingir a supermeta<input id="settingsSuperBonus" type="number" min="0" max="1000" step="10" required><span>% do salário-base</span></label>
+              </div>
+              <div class="bonus-preview"><div class="bonus-preview-icon">1×</div><div><span>Meta geral</span><b id="settingsGeneralPreview">R$ 0</b><small id="settingsGeneralBonusPreview">1 salário-base para toda a empresa</small></div><div class="bonus-preview-arrow">→</div><div class="bonus-preview-icon super">2×</div><div><span>Supermeta</span><b id="settingsSuperPreview">R$ 0</b><small id="settingsSuperBonusPreview">2 salários-base para toda a empresa</small></div></div>
+            </div>
+            <div class="settings-card consultant-goals">
+              <div class="card-title"><div><h3>Metas individuais</h3><p>Distribua a meta anual entre os consultores comerciais.</p></div><button type="button" class="secondary" id="addGoalConsultant">＋ Adicionar consultor</button></div>
+              <div class="consultant-goal-head"><span>Consultor</span><span>Meta anual</span><span>Participação</span><span></span></div>
+              <div id="consultantGoalRows"></div>
+              <div class="allocation-summary" id="allocationSummary"><div><span>Soma das metas individuais</span><b id="individualGoalTotal">R$ 0</b></div><div><span>Meta geral da empresa</span><b id="companyGoalTotal">R$ 0</b></div><strong id="allocationStatus">Valores conciliados</strong></div>
+            </div>
+            <div class="settings-actions"><div><b>Última configuração</b><span id="goalSettingsUpdated">Valores demonstrativos de 2026</span></div><button type="submit" class="primary">Salvar metas</button></div>
+          </form>
+          <div class="access-denied" id="goalsAccessDenied" hidden><b>Acesso restrito</b><span>Somente Administradores e Coordenadores comerciais podem alterar as metas.</span></div>
+        </section>
+      </div>
+    </div>
+  </section>
+</main>
+
+<aside class="activity-detail" id="activityDetail" aria-hidden="true">
+  <div class="activity-detail-top"><button id="closeActivityDetail" aria-label="Fechar detalhes">×</button><div class="activity-entity-tabs"><span id="detailProjectTab">Projeto</span><strong id="detailClientTab">Cliente</strong><span id="detailContactTab">Contato</span><span id="detailOrgTab">Organização</span></div></div>
+  <div class="activity-detail-head"><div><p class="eyebrow">CLIENTE E OPORTUNIDADE</p><h2 id="detailClientName">Cliente</h2></div><div class="detail-owner"><span class="user-avatar">FH</span><div><b id="detailOwnerName">CONSULTOR DESATIVADO</b><small>Responsável</small></div></div><button type="button" class="detail-status won" id="generateOrderBtn">Gerar pedido</button></div>
+  <div class="detail-stage" id="detailStages"></div>
+  <div class="activity-detail-body">
+    <section class="detail-sidebar"><label class="detail-search">⌕ <input placeholder="Filtrar campos"></label><div class="detail-block"><h3>Resumo</h3><div class="detail-summary-grid"><div><span>Valor</span><b id="detailValue">R$ 0</b></div><div><span>Organização</span><b id="detailOrganization">—</b></div><div><span>Contato</span><b id="detailContact">—</b></div><div><span>Telefone</span><b id="detailPhone">—</b></div><div><span>E-mail</span><b id="detailEmail">—</b></div><div><span>Estado</span><b id="detailState">—</b></div></div></div><div class="detail-block"><h3>Detalhes</h3><div class="detail-field"><span>Segmento</span><b id="detailSegment">—</b></div><div class="detail-field"><span>Último contato</span><b id="detailLastContact">—</b></div><div class="detail-field"><span>Próxima atividade</span><b id="detailNextActivity">—</b></div></div></section>
+    <section class="detail-main"><div class="detail-compose-tabs"><button class="active">▤ Anotações</button><button id="detailNewActivity">▣ Atividade</button><button>☎ Chamada</button></div><div class="detail-note-input"><div class="detail-note-area"><div class="detail-note-tools"><button id="detailBoldButton" type="button" aria-label="Negrito" aria-pressed="false" title="Negrito (Ctrl+B)">B</button></div><div id="detailQuickNote" class="note-editor" contenteditable="true" role="textbox" aria-multiline="true" aria-label="Anotação para este cliente" data-placeholder="Escreva uma anotação para este cliente..."></div></div><button id="saveQuickNote" type="button">Adicionar anotação</button></div><div class="detail-focus-head"><h3>Atividades do cliente <small id="detailProjectCount"></small></h3><label><input type="checkbox" id="detailExpandAll" checked> Expandir todos os itens</label></div><div class="client-activity-filters" id="clientActivityFilters" role="group" aria-label="Filtrar atividades deste cliente"><button type="button" data-client-filter="pending">Pendentes</button><button type="button" data-client-filter="today">Hoje</button><button type="button" data-client-filter="tomorrow">Amanhã</button><button type="button" data-client-filter="completed">Concluídas</button><button type="button" data-client-filter="all">Todas</button></div><div id="detailFocus"></div><div class="detail-history-head"><h3>Histórico do cliente</h3><div class="history-actions"><button id="historyCopyAddress" type="button" hidden>Copiar endereço de acompanhamento</button><button id="historyAddEmail" type="button">＋ Adicionar e-mail ao histórico</button></div></div><input id="historyEmailFile" type="file" accept=".eml,.msg" hidden><p class="history-status" id="historyEmailStatus" role="status" aria-live="polite"></p><div class="detail-timeline" id="detailTimeline"></div></section>
+  </div>
+</aside><div class="activity-detail-scrim" id="activityDetailScrim"></div>
+
+<div class="activity-editor" id="activityEditor" aria-hidden="true"><div class="activity-editor-box"><div class="activity-editor-head"><div><p class="eyebrow" id="activityEditorEyebrow">NOVA ATIVIDADE</p><h2 id="activityEditorTitle">Programar follow-up</h2></div><button id="closeActivityEditor" aria-label="Fechar editor">×</button></div><div class="activity-editor-grid"><form id="activityEditorForm"><label class="activity-subject">Assunto<input id="activitySubject" required placeholder="Ex.: Retorno da proposta de impressoras"></label><div class="activity-kind" id="activityKind"><button type="button" class="active" data-kind="Chamada">☎<span>Chamada</span></button><button type="button" data-kind="Reunião">♟<span>Reunião</span></button><button type="button" data-kind="Tarefa">◷<span>Tarefa</span></button><button type="button" data-kind="Proposta">◇<span>Proposta</span></button><button type="button" data-kind="E-mail">✉<span>E-mail</span></button></div><div class="activity-form-row"><label>Data<input id="activityDate" type="date" required></label><label>Início<input id="activityTime" type="time" required></label><label>Fim<input id="activityEndTime" type="time"></label><label>Prioridade<select id="activityPriority"><option>Normal</option><option>Alta</option><option>Urgente</option></select></label></div><div class="activity-description"><span>Descrição e histórico</span><div id="activityDescription" class="activity-rich-editor" contenteditable="true" role="textbox" aria-multiline="true" aria-label="Descrição e histórico" data-placeholder="Registre o histórico do contato e o objetivo do próximo follow-up"></div><div class="activity-rich-tools" role="toolbar" aria-label="Formatar descrição e histórico"><button id="activityDescriptionBold" data-format="bold" type="button" aria-label="Negrito" aria-pressed="false" title="Negrito (Ctrl+B)"><b>B</b></button><button data-format="italic" type="button" aria-label="Itálico" aria-pressed="false" title="Itálico (Ctrl+I)"><i>I</i></button><button data-format="underline" type="button" aria-label="Sublinhado" aria-pressed="false" title="Sublinhado (Ctrl+U)"><u>U</u></button><span class="format-divider" aria-hidden="true"></span><button data-format="insertOrderedList" type="button" aria-label="Lista numerada" aria-pressed="false" title="Lista numerada"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 5h12M10 12h12M10 19h12"/><text x="1" y="7">1</text><text x="1" y="14">2</text><text x="1" y="21">3</text></svg></button><button data-format="insertUnorderedList" type="button" aria-label="Lista com marcadores" aria-pressed="false" title="Lista com marcadores"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5h13M9 12h13M9 19h13"/><circle cx="3.5" cy="5" r="1"/><circle cx="3.5" cy="12" r="1"/><circle cx="3.5" cy="19" r="1"/></svg></button><span class="format-divider" aria-hidden="true"></span><button data-format="outdent" type="button" aria-label="Diminuir recuo" title="Diminuir recuo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5h14M8 12h14M8 19h14M6 8l-4 4 4 4"/></svg></button><button data-format="indent" type="button" aria-label="Aumentar recuo" title="Aumentar recuo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5h13M9 12h13M9 19h13M2 8l4 4-4 4"/></svg></button></div></div><div class="activity-form-row two"><label>Responsável<select id="activityOwner"></select></label><label>Cliente / Negócio<input id="activityClient" list="activityClientOptions" required placeholder="Nome do cliente"><datalist id="activityClientOptions"></datalist></label></div><div class="activity-form-row"><label class="activity-project-field">Projeto <small>Selecione um existente ou digite outro para este cliente</small><input id="activityProject" list="clientProjectOptions" required placeholder="Ex.: Implantação de coletores"></label><datalist id="clientProjectOptions"></datalist></div><div class="activity-form-row two"><label>Pessoa de contato<input id="activityContact" placeholder="Nome do contato"></label><label>Organização / modalidade<input id="activityOrganization" placeholder="Ex.: Varejo, Indústria, Concessionária"></label></div><div class="activity-form-row two"><label>E-mail<input id="activityEmail" type="email" placeholder="contato@example.invalid"></label><label>Telefone<input id="activityPhone" placeholder="(00 90000-0000"></label></div><div class="activity-editor-actions"><label><input type="checkbox" id="activityDone"> Marcar como concluída</label><div><button type="button" class="secondary" id="cancelActivityEditor">Cancelar</button><button type="submit" class="primary">Salvar atividade</button></div></div></form><aside class="activity-day-agenda"><div class="agenda-head"><button type="button">‹</button><div><b id="agendaDateLabel">Agenda do dia</b><span id="agendaCount">0 atividades</span></div><button type="button">›</button></div><div class="agenda-list" id="agendaList"></div><div class="agenda-hours" id="agendaHours"></div></aside></div></div></div>
+
+<div class="modal" id="modal" aria-hidden="true"><div class="modal-box"><div class="modal-head"><div><p class="eyebrow" id="modalEyebrow">NOVA OPORTUNIDADE</p><h2 id="modalTitle">Cadastrar oportunidade</h2></div><button id="closeModal" aria-label="Fechar">×</button></div><form id="recordForm"><div class="form-grid" id="formFields"></div><div class="modal-actions"><button type="button" class="secondary" id="cancelModal">Cancelar</button><button type="submit" class="primary">Salvar</button></div></form></div></div>
+<div class="drawer" id="drawer"><div class="drawer-head"><div><p class="eyebrow">DETALHES DA OPORTUNIDADE</p><h2 id="drawerTitle"></h2></div><button id="closeDrawer">×</button></div><div class="deal-progress"><i></i><i></i><i></i><i></i></div><div id="drawerBody"></div></div><div class="scrim" id="scrim"></div>
+<div class="toast" id="toast">✓ Registro salvo com sucesso</div>
+<script src="assets/auth.js?v=35"></script><script src="assets/app.js?v=66"></script><script src="assets/goals-dashboard.js?v=33"></script><script src="assets/settings.js?v=33"></script><script src="assets/rich-notes.js?v=18"></script><script src="assets/activity-identity.js"></script><script src="assets/activities.js?v=66"></script><script src="assets/geo-dashboard.js?v=33"></script><script src="assets/secure-activities.js"></script>
+<script src="assets/purify.min.js"></script><script src="assets/client-history.js?v=16"></script><script src="assets/inventory-import-parser.js"></script><script src="assets/inventory.js"></script><script src="assets/inventory-import.js"></script><script src="assets/order-workflow.js?v=33"></script><script src="assets/postal-code.js?v=31"></script><script src="assets/client-orders.js?v=66"></script><script src="assets/clients.js?v=65"></script>
+<script src="assets/users.js?v=35"></script><script src="assets/client-access.js"></script><script src="assets/imports.js?v=66"></script><script src="assets/market-analysis.js?v=48"></script><script src="assets/company-import-parser.js"></script><script src="assets/sales-history-parser.js"></script><script src="assets/sales-history.js"></script><script src="assets/market-import.js?v=48"></script><script src="assets/service-label.js"></script><script src="assets/maintenance.js"></script><script src="assets/sidebar-menu.js"></script></body></html>

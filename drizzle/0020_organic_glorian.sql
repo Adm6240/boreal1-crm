@@ -1,0 +1,1 @@
+ALTER TABLE `inventory_items` ADD `condition` text DEFAULT 'unknown' NOT NULL;

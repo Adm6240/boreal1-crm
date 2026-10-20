@@ -1,0 +1,32 @@
+.pipeline-empty {
+  display: grid;
+  place-items: center;
+  min-height: 150px;
+  padding: 24px 14px;
+  border: 1px dashed #cfd9e6;
+  border-radius: 10px;
+  background: #f7f9fc;
+  color: #738196;
+  text-align: center;
+}
+
+.pipeline-empty b {
+  color: #49586c;
+  font-size: 13px;
+}
+
+.pipeline-empty span {
+  max-width: 180px;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+#pipelineTotal b {
+  color: var(--ink);
+}
+
+@media (max-width: 760px) {
+  #pipelineTotal {
+    min-width: 230px;
+  }
+}

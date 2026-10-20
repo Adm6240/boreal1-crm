@@ -1,0 +1,8 @@
+// Company identity is independent of its commercial classification.
+(function(root){
+ const norm=v=>String(v||'').trim().normalize('NFC').toLocaleLowerCase('pt-BR').replace(/\s+/g,' ');
+ const group=v=>{const key=norm(v).normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[_ -](?:ac|al|ap|am|ba|ce|df|es|go|ma|mt|ms|mg|pa|pb|pr|pe|pi|rj|rn|rs|ro|rr|sc|sp|se|to)$/,'');return ({varejo:'Varejo',concessionaria:'Concessionária',concessionarias:'Concessionária',industria:'Indústria',industrias:'Indústria',empreiteiro:'Empreiteiro',empreiteira:'Empreiteiro',empreiteiros:'Empreiteiro',parceiros:'Parceiros',parceiro:'Parceiros',logistica:'Logística',instituicao:'Instituição',instituicoes:'Instituição'})[key]||null;};
+ function resolve(record){const category=group(record.client);if(!category)return record;const name=String(record.identityOriginal?.resolvedClient||record.project||'').trim();if(!name||group(name))return record;return {...record,client:name,clientProfileId:null,organization:group(record.organization)||category,segment:group(record.segment)||category,identityOriginal:record.identityOriginal||{client:record.client,clientProfileId:record.clientProfileId||null,organization:record.organization||'',resolvedClient:name}};}
+ function same(a,b){const x=resolve(a),y=resolve(b);if(group(x.client)||group(y.client))return x.id!=null&&x.id===y.id;if(x.clientProfileId&&y.clientProfileId)return x.clientProfileId===y.clientProfileId;return !!norm(x.client)&&norm(x.client)===norm(y.client)&&norm(x.state)===norm(y.state);}
+ root.BorealActivityIdentity={resolve,same,group};
+})(globalThis);

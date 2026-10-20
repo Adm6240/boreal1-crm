@@ -1,0 +1,12 @@
+#authGate[hidden],.sidebar [hidden],.settings-tabs [hidden]{display:none!important}
+#authGate{position:fixed;inset:0;z-index:1000;background:#f4f7fb;display:grid;place-items:center;padding:24px}
+.auth-gate-card{width:min(460px,100%);background:#fff;border:1px solid #dce4ef;border-radius:16px;box-shadow:0 16px 45px #09255420;padding:30px;text-align:center}
+.auth-gate-card h1{font-size:22px;margin:0 0 12px}.auth-gate-card p{color:#526780;line-height:1.55;margin-bottom:16px}
+.user-form{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:16px 0}.user-form label{display:grid;gap:6px;font-size:12px;font-weight:700;color:#31506e}.user-form input,.user-form select{width:100%;border:1px solid #ccd9e7;border-radius:8px;padding:10px;background:#fff;color:#16314d}.user-form .wide{grid-column:1/-1}.user-form button{justify-self:start}.user-form-status{font-size:13px;color:#31506e;margin:8px 0 14px}.user-row button{padding:7px 10px;font-size:12px}.user-row.inactive{opacity:.6}.user-row>div{min-width:0}.user-row small{overflow-wrap:anywhere}
+@media(max-width:680px){.user-form{grid-template-columns:1fr}.user-form .wide{grid-column:auto}.user-row{grid-template-columns:auto 1fr}.user-row button{grid-column:2}}
+[hidden]{display:none!important}
+.auth-gate-card form{display:grid;gap:16px;text-align:left}.auth-gate-card label{display:grid;gap:7px;font-size:14px}.auth-gate-card input{width:100%;padding:12px;border:1px solid #cbd7e7;border-radius:8px;font:inherit}.auth-gate-card img{object-fit:contain;margin-bottom:20px}.auth-gate-card button{min-height:42px}.user-form label,.user-row button,.user-form-status{font-size:14px}.user-form p{color:#526780}.user-row{flex-wrap:wrap;gap:12px}.user-row .user-actions{display:flex;gap:8px;margin-left:auto}.user-row small{display:block}.users-list{margin-bottom:24px}#usersStatus,#userFormStatus{color:#365571}details{margin:24px 0}summary{cursor:pointer;font-weight:600}
+
+body[data-auth="locked"] > :not(#authGate){display:none!important}
+
+#headerLogout{min-width:64px;min-height:40px;font-size:14px;flex-shrink:0}#authGate{overflow:auto}.auth-gate-card{margin:auto}

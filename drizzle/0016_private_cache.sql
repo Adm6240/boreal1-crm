@@ -1,0 +1,1 @@
+ALTER TABLE `user_activities` ADD `cache_key` text;

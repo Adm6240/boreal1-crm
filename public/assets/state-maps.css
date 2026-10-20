@@ -1,0 +1,81 @@
+.vector-map .states path.selected {
+  filter: brightness(.76) drop-shadow(0 6px 10px #0a2c5850);
+  stroke: #f4a51c;
+  stroke-width: 13;
+}
+
+.municipal-vector {
+  width: min(100%, 790px);
+  aspect-ratio: auto;
+  padding: 18px 22px 42px;
+}
+
+.municipal-vector svg {
+  display: block;
+  width: 100%;
+  height: min(66vh, 670px);
+  overflow: visible;
+  filter: drop-shadow(0 14px 24px #15365c18);
+}
+
+.municipalities path {
+  fill: #e5eaf0;
+  stroke: #fff;
+  stroke-width: 1.15;
+  vector-effect: non-scaling-stroke;
+  cursor: pointer;
+  transition: fill .13s ease, filter .13s ease, stroke .13s ease;
+  outline: none;
+}
+
+.municipalities path.covered {
+  fill: #1769c7;
+}
+
+.municipalities path.covered[data-count="1"],
+.municipalities path.covered[data-count="2"] {
+  fill: #78ace0;
+}
+
+.municipalities path.covered[data-count="3"],
+.municipalities path.covered[data-count="4"],
+.municipalities path.covered[data-count="5"] {
+  fill: #347fc9;
+}
+
+.municipalities path:hover,
+.municipalities path:focus-visible,
+.municipalities path.selected-city {
+  fill: #f2a51a;
+  stroke: #082e60;
+  stroke-width: 2.2;
+  filter: drop-shadow(0 2px 4px #06295255);
+}
+
+.municipal-source {
+  position: absolute;
+  right: 12px;
+  bottom: 10px;
+  padding: 6px 9px;
+  border: 1px solid #d8e1ec;
+  border-radius: 7px;
+  background: #fffffff0;
+  color: #52657a;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.state-view .election-map {
+  min-height: 610px;
+  background: radial-gradient(circle at 50% 42%, #fff 0, #f7faff 68%, #edf3fa 100%);
+}
+
+@media (max-width: 680px) {
+  .municipal-vector {
+    min-width: 620px;
+  }
+
+  .municipal-vector svg {
+    height: 540px;
+  }
+}

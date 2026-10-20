@@ -1,0 +1,29 @@
+(() => {
+ 'use strict';
+ const el=id=>document.getElementById(id),gate=el('authGate'),message=el('authMessage'),originalFetch=window.fetch.bind(window);let ready;
+ const auth={user:null,ready:new Promise(resolve=>ready=resolve),canWorkflow:area=>auth.user?.role==='admin'||auth.user?.role===area};window.BorealAuth=auth;
+ // Hold application requests until login and the initial password change are complete.
+ window.fetch=async(input,options)=>{const url=typeof input==='string'?input:input.url;if(url?.startsWith('/api/')&&!url.startsWith('/api/auth/')&&url!=='/api/me')await auth.ready;const response=await originalFetch(input,options);if(response.status===401&&url?.startsWith('/api/')){auth.expired=true;document.body.dataset.auth='locked';loginScreen('Sua sessão terminou. Entre novamente para continuar.');}return response;};
+ async function call(path,data){const response=await originalFetch(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data||{}),credentials:'same-origin'}),body=await response.json();if(!response.ok)throw new Error(body.error||'Não foi possível entrar.');return body;}
+ auth.call=call;
+ function apply(user){auth.user=user;
+  if(user.mustChangePassword){el('authTitle').textContent=user.bootstrap?'Definir minha senha':'Confirmar meu acesso';message.textContent='Crie uma senha pessoal diferente da senha inicial, com pelo menos 11 caracteres.';el('loginForm').hidden=true;el('initialPasswordForm').hidden=false;el('initialCurrentLabel').hidden=!!user.bootstrap;el('initialPasswordForm').elements.currentPassword.required=!user.bootstrap;return;}
+  document.body.dataset.role=user.role;document.querySelector('.header-actions .avatar').textContent=user.name.split(/\s+/).map(x=>x[0]).slice(0,2).join('');document.querySelector('.header-actions strong').textContent=user.name.split(' ')[0];document.querySelector('.header-actions small').textContent=user.roleName;
+  el('connectedUserName').textContent=user.name;el('connectedUserRole').textContent=user.roleName;el('connectedUserEmail').textContent=user.email;document.querySelector('.role-chip').textContent='Acesso: '+user.roleName;
+  document.querySelector('[data-settings-tab="users"]').hidden=user.role!=='admin';document.querySelector('[data-settings-tab="goals"]').hidden=!['admin','coordinator'].includes(user.role);
+  if(!['admin','coordinator'].includes(user.role))document.querySelector('[data-settings-tab="account"]').click();
+  document.querySelectorAll('[data-sector]').forEach(group=>group.hidden=!['admin','coordinator','commercial',group.dataset.sector].includes(user.role));
+  if(!['admin','coordinator','commercial'].includes(user.role)){el('globalSearch').closest('label').hidden=true;document.querySelectorAll('.sidebar [data-view]').forEach(node=>{if(![user.role].includes(node.dataset.view))node.hidden=true;});document.querySelector(`.sidebar [data-view="${user.role}"]`)?.click();}
+  if(user.role==='commercial'){const owner=el('activityOwner');owner.replaceChildren(new Option(user.consultantName,user.consultantName));owner.value=user.consultantName;owner.disabled=true;}
+  if(auth.expired){location.reload();return;}delete document.body.dataset.auth;gate.hidden=true;ready(user);window.dispatchEvent(new CustomEvent('boreal:authenticated',{detail:user}));
+ }
+ function loginScreen(error){gate.hidden=false;el('authTitle').textContent='Entrar no Boreal';message.textContent=error||'Use seu e-mail ou ID e senha.';el('loginForm').hidden=false;el('initialPasswordForm').hidden=true;}
+ document.addEventListener('click',event=>{const nav=event.target.closest('[data-view],[data-operation-jump]');const user=auth.user;if(nav&&user&&!['admin','coordinator','commercial'].includes(user.role)&&![user.role,user.role+'-aftersales'].includes(nav.dataset.view||nav.dataset.operationJump)){event.preventDefault();event.stopImmediatePropagation();}},true);
+ el('forgotPassword').onclick=()=>message.textContent='Peça a um administrador para redefinir sua senha em Configurações → Usuários. Você deverá trocar a senha recebida ao entrar.';
+ async function submit(form,task,status=message){const button=form.querySelector('[type="submit"],button');button.disabled=true;try{await task();form.reset();}catch(e){status.textContent=e.message;}finally{button.disabled=false;}}
+ el('loginForm').onsubmit=event=>{event.preventDefault();const form=event.target;submit(form,async()=>{message.textContent='Entrando…';apply((await call('/api/auth/login',Object.fromEntries(new FormData(form)))).user);});};
+ el('initialPasswordForm').onsubmit=event=>{event.preventDefault();const form=event.target;submit(form,async()=>{const data=Object.fromEntries(new FormData(form));if(data.password!==data.confirm)throw new Error('As senhas não conferem.');apply((await call('/api/auth/password',data)).user);});};
+ el('changePasswordForm').onsubmit=event=>{event.preventDefault();const form=event.target,status=form.querySelector('[role="status"]');submit(form,async()=>{await call('/api/auth/password',Object.fromEntries(new FormData(form)));status.textContent='Senha alterada. As outras sessões foram encerradas.';},status);};
+ document.querySelectorAll('.auth-logout').forEach(button=>button.onclick=async()=>{try{await window.BorealFlushActivities?.();await call('/api/auth/logout');window.BorealClearActivities?.();auth.user=null;auth.expired=true;document.body.dataset.auth='locked';loginScreen('Você saiu do sistema.');el('loginForm').reset();el('initialPasswordForm').reset();if(location.hostname!=='boreal.test')location.reload();}catch(e){window.alert('Não foi possível sair. '+e.message);}});
+ originalFetch('/api/me',{credentials:'same-origin'}).then(async response=>{const data=await response.json();if(!response.ok){loginScreen(response.status===401?'':data.error);return;}apply(data.user);}).catch(()=>loginScreen('Não foi possível verificar o acesso. Tente entrar novamente.'));
+})();
